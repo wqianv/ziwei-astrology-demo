@@ -498,6 +498,84 @@ dd {
   line-height: 1.7;
 }
 
+.deepseek-config {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border-top: 1px solid rgba(36, 29, 25, 0.1);
+  padding-top: 18px;
+}
+
+.deepseek-config-header,
+.deepseek-local-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.deepseek-config-header strong {
+  color: #241d19;
+  font-size: 15px;
+}
+
+.deepseek-config-header span {
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #f1e5d4;
+  color: #6c5544;
+  font-size: 12px;
+}
+
+.deepseek-fields {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(170px, 220px);
+  gap: 12px;
+}
+
+.deepseek-fields label {
+  color: #5c4e44;
+}
+
+.deepseek-fields input {
+  border-color: rgba(36, 29, 25, 0.14);
+  background: #fffaf0;
+  color: #241d19;
+}
+
+.privacy-note,
+.deepseek-warning,
+.deepseek-local-row span {
+  margin-top: 0 !important;
+  color: #5c4e44 !important;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+}
+
+.deepseek-warning {
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: rgba(159, 47, 39, 0.09);
+  color: #8c332c !important;
+}
+
+.deepseek-local-row {
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: rgba(47, 118, 104, 0.1);
+}
+
+.deepseek-local-row button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  border: 1px solid rgba(47, 118, 104, 0.32);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: #fffaf0;
+  color: #2f7668;
+  font-size: 12px;
+}
+
 .deepseek-button {
   min-height: 38px;
   margin-top: 16px;
@@ -802,6 +880,7 @@ dd {
   .result-layout,
   .bazi-summary,
   .bazi-panels,
+  .deepseek-fields,
   .interpretation-columns {
     align-items: start;
     grid-template-columns: 1fr;
@@ -833,6 +912,12 @@ dd {
 }
 
 @media (max-width: 680px) {
+  .deepseek-config-header,
+  .deepseek-local-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .summary-grid,
   .pillar-grid,
   .interpretation-grid,

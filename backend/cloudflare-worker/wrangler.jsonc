@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ziwei-deepseek-proxy",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-09",
+  "vars": {
+    "ALLOWED_ORIGIN": "https://wqianv.github.io",
+    "DEEPSEEK_MODEL": "deepseek-v4-pro"
+  }
+}

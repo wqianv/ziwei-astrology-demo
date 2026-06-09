@@ -33,10 +33,14 @@ const sampleProfiles = [
 
 const deepSeekProgressSteps = [
   "整理紫微和八字数据",
-  "发送 DeepSeek Pro 请求",
+  "发送 DeepSeek 请求",
   "等待模型推理",
   "接收并拆分报告",
 ];
+
+const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-pro";
+const DEEPSEEK_API_KEY_STORAGE_KEY = "ziwei.deepseek.apiKey";
+const DEEPSEEK_MODEL_STORAGE_KEY = "ziwei.deepseek.model";
 
 function App() {
   const [activeView, setActiveView] = useState<ActiveView>("ziwei");
@@ -494,6 +498,15 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
   const [deepSeekLoading, setDeepSeekLoading] = useState(false);
   const [deepSeekStartedAt, setDeepSeekStartedAt] = useState<number>();
   const [deepSeekElapsedSeconds, setDeepSeekElapsedSeconds] = useState(0);
+  const [deepSeekApiKey, setDeepSeekApiKey] = useState("");
+  const [deepSeekModel, setDeepSeekModel] = useState(DEFAULT_DEEPSEEK_MODEL);
+  const [deepSeekApiKeySaved, setDeepSeekApiKeySaved] = useState(false);
+  const [deepSeekSaveNotice, setDeepSeekSaveNotice] = useState("");
+  const trimmedDeepSeekApiKey = deepSeekApiKey.trim();
+  const isGithubPages = window.location.hostname.endsWith("github.io");
+  const hasExternalProxy = Boolean(import.meta.env.VITE_DEEPSEEK_PROXY_URL);
+  const shouldPromptForApiKey =
+    isGithubPages && !hasExternalProxy && !trimmedDeepSeekApiKey;
   const parsedDeepSeekReport = useMemo(
     () =>
       deepSeekResult ? parseLLMMarkdown(deepSeekResult.content) : undefined,
@@ -502,6 +515,22 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
   const hasSectionedDeepSeekReport = parsedDeepSeekReport
     ? hasParsedLLMSections(parsedDeepSeekReport)
     : false;
+
+  useEffect(() => {
+    const savedApiKey = window.localStorage.getItem(
+      DEEPSEEK_API_KEY_STORAGE_KEY,
+    );
+    const savedModel = window.localStorage.getItem(DEEPSEEK_MODEL_STORAGE_KEY);
+
+    if (savedApiKey) {
+      setDeepSeekApiKey(savedApiKey);
+      setDeepSeekApiKeySaved(true);
+    }
+
+    if (savedModel) {
+      setDeepSeekModel(savedModel);
+    }
+  }, []);
 
   useEffect(() => {
     setDeepSeekResult(undefined);
@@ -526,15 +555,66 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
     return () => window.clearInterval(timer);
   }, [deepSeekLoading, deepSeekStartedAt]);
 
+  const handleDeepSeekApiKeyChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setDeepSeekApiKey(event.target.value);
+    setDeepSeekApiKeySaved(false);
+    setDeepSeekSaveNotice("");
+  };
+
+  const clearSavedDeepSeekApiKey = () => {
+    window.localStorage.removeItem(DEEPSEEK_API_KEY_STORAGE_KEY);
+    window.localStorage.removeItem(DEEPSEEK_MODEL_STORAGE_KEY);
+    setDeepSeekApiKey("");
+    setDeepSeekApiKeySaved(false);
+    setDeepSeekSaveNotice("已清除本机浏览器保存的 DeepSeek API Key。");
+  };
+
   const generateDeepSeekReport = async () => {
     setDeepSeekLoading(true);
     setDeepSeekError("");
     setDeepSeekResult(undefined);
+    setDeepSeekSaveNotice("");
     setDeepSeekElapsedSeconds(0);
     setDeepSeekStartedAt(Date.now());
 
     try {
-      setDeepSeekResult(await requestDeepSeekInterpretation(result.prompt));
+      const response = await requestDeepSeekInterpretation(
+        trimmedDeepSeekApiKey
+          ? {
+              mode: "browser",
+              prompt: result.prompt,
+              apiKey: trimmedDeepSeekApiKey,
+              model: deepSeekModel,
+            }
+          : {
+              mode: "proxy",
+              prompt: result.prompt,
+            },
+      );
+      setDeepSeekResult(response);
+
+      if (trimmedDeepSeekApiKey) {
+        try {
+          window.localStorage.setItem(
+            DEEPSEEK_API_KEY_STORAGE_KEY,
+            trimmedDeepSeekApiKey,
+          );
+          window.localStorage.setItem(
+            DEEPSEEK_MODEL_STORAGE_KEY,
+            deepSeekModel,
+          );
+          setDeepSeekApiKeySaved(true);
+          setDeepSeekSaveNotice(
+            "已在本机浏览器保存 API Key，下次打开本页面会自动带出。",
+          );
+        } catch {
+          setDeepSeekSaveNotice(
+            "报告已生成，但浏览器拒绝本地保存 API Key。",
+          );
+        }
+      }
     } catch (error) {
       setDeepSeekError(
         error instanceof Error ? error.message : "DeepSeek request failed",
@@ -550,13 +630,62 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
         <span className="eyebrow dark">plain language report</span>
         <h3>{result.headline}</h3>
         <p>{result.summary}</p>
+
+        <div className="deepseek-config" aria-label="DeepSeek 连接配置">
+          <div className="deepseek-config-header">
+            <strong>DeepSeek 连接</strong>
+            <span>{trimmedDeepSeekApiKey ? "浏览器直连" : "后端代理"}</span>
+          </div>
+          <div className="deepseek-fields">
+            <label>
+              <span>自己的 API Key</span>
+              <input
+                type="password"
+                autoComplete="off"
+                value={deepSeekApiKey}
+                onChange={handleDeepSeekApiKeyChange}
+                placeholder="sk-..."
+              />
+            </label>
+            <label>
+              <span>模型</span>
+              <input
+                value={deepSeekModel}
+                onChange={(event) => setDeepSeekModel(event.target.value)}
+                placeholder={DEFAULT_DEEPSEEK_MODEL}
+              />
+            </label>
+          </div>
+          <p className="privacy-note">
+            API Key 只保存在你的浏览器本地，生成时由你的浏览器直接请求
+            DeepSeek；我们不会收集、保存或上传你的 Key。
+          </p>
+          {shouldPromptForApiKey && (
+            <p className="deepseek-warning">
+              当前 GitHub Pages 未配置后端代理，请输入自己的 API Key 后生成。
+            </p>
+          )}
+          {(deepSeekApiKeySaved || deepSeekSaveNotice) && (
+            <div className="deepseek-local-row">
+              <span>{deepSeekSaveNotice || "已读取本机保存的 API Key。"}</span>
+              <button type="button" onClick={clearSavedDeepSeekApiKey}>
+                清除本机 Key
+              </button>
+            </div>
+          )}
+        </div>
+
         <button
           className="deepseek-button"
           type="button"
           onClick={generateDeepSeekReport}
           disabled={deepSeekLoading}
         >
-          {deepSeekLoading ? "DeepSeek 生成中..." : "用 DeepSeek 生成正式解读"}
+          {deepSeekLoading
+            ? "DeepSeek 生成中..."
+            : trimmedDeepSeekApiKey
+              ? "用我的 Key 生成正式解读"
+              : "用后端代理生成正式解读"}
         </button>
         {deepSeekError && <p className="deepseek-error">{deepSeekError}</p>}
       </section>
@@ -599,7 +728,10 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
         <section className="analysis-panel llm-report-panel">
           <div className="llm-report-header">
             <h3>DeepSeek 解读已生成</h3>
-            <span>{deepSeekResult.model || "deepseek"}</span>
+            <span>
+              {deepSeekResult.model || "deepseek"} ·{" "}
+              {deepSeekResult.source === "browser" ? "浏览器直连" : "后端代理"}
+            </span>
           </div>
           <p>
             {hasSectionedDeepSeekReport
