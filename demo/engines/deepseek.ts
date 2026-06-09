@@ -55,7 +55,7 @@ export async function requestDeepSeekInterpretation(
         ? { "X-Ziwei-Proxy-Key": request.accessKey.trim() }
         : {}),
     },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt: request.prompt }),
   });
   const data = await response.json();
 
