@@ -15,14 +15,15 @@ export type DeepSeekInterpretationRequest =
       prompt: string;
       apiKey: string;
       model: string;
-      baseUrl?: string;
+      baseUrl: string;
     }
   | {
       mode: "proxy";
       prompt: string;
+      accessKey?: string;
     };
 
-const deepSeekSystemPrompt =
+const llmSystemPrompt =
   "你负责把传统命理排盘解释成普通人能理解、可执行、不过度断言的中文报告。";
 
 export async function requestDeepSeekInterpretation(
@@ -33,14 +34,16 @@ export async function requestDeepSeekInterpretation(
   }
 
   const endpoint =
-    import.meta.env.VITE_DEEPSEEK_PROXY_URL || "/api/deepseek/interpret";
+    import.meta.env.VITE_LLM_PROXY_URL ||
+    import.meta.env.VITE_DEEPSEEK_PROXY_URL ||
+    "/api/llm/interpret";
 
   if (
-    endpoint === "/api/deepseek/interpret" &&
+    endpoint === "/api/llm/interpret" &&
     window.location.hostname.endsWith("github.io")
   ) {
     throw new Error(
-      "GitHub Pages 是静态部署，无法运行本地 DeepSeek 代理。请配置 VITE_DEEPSEEK_PROXY_URL 指向外部代理。",
+      "GitHub Pages 是静态部署，无法运行本地 LLM 代理。请配置 VITE_LLM_PROXY_URL 指向 Cloudflare Worker。",
     );
   }
 
@@ -48,13 +51,16 @@ export async function requestDeepSeekInterpretation(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...(request.accessKey?.trim()
+        ? { "X-Ziwei-Proxy-Key": request.accessKey.trim() }
+        : {}),
     },
     body: JSON.stringify({ prompt }),
   });
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || "DeepSeek request failed");
+    throw new Error(data.error || "LLM request failed");
   }
 
   return { ...data, source: "proxy" };
@@ -69,7 +75,7 @@ async function requestDeepSeekFromBrowser({
   const key = apiKey.trim();
 
   if (!key) {
-    throw new Error("请输入 DeepSeek API Key，或配置后端代理。");
+    throw new Error("请输入 OpenAI 兼容接口 API Key，或配置后端代理。");
   }
 
   const endpoint = `${trimTrailingSlash(
@@ -90,7 +96,7 @@ async function requestDeepSeekFromBrowser({
         messages: [
           {
             role: "system",
-            content: deepSeekSystemPrompt,
+            content: llmSystemPrompt,
           },
           { role: "user", content: prompt },
         ],
@@ -101,15 +107,15 @@ async function requestDeepSeekFromBrowser({
   } catch (error) {
     throw new Error(
       error instanceof TypeError
-        ? "浏览器直连 DeepSeek 失败，可能是网络或 CORS 限制。可以稍后重试，或改用我们搭的后端代理。"
-        : "DeepSeek request failed",
+        ? "浏览器直连 OpenAI 兼容接口失败，可能是网络或 CORS 限制。可以稍后重试，或改用我们搭的后端代理。"
+        : "LLM request failed",
     );
   }
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.error?.message || "DeepSeek request failed");
+    throw new Error(data?.error?.message || "LLM request failed");
   }
 
   return {

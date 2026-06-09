@@ -565,7 +565,15 @@ dd {
   background: rgba(47, 118, 104, 0.1);
 }
 
-.deepseek-local-row button {
+.deepseek-local-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.deepseek-local-actions button {
   flex: 0 0 auto;
   min-height: 30px;
   border: 1px solid rgba(47, 118, 104, 0.32);
@@ -916,6 +924,14 @@ dd {
   .deepseek-local-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .deepseek-local-actions {
+    justify-content: stretch;
+  }
+
+  .deepseek-local-actions button {
+    width: 100%;
   }
 
   .summary-grid,

@@ -9,13 +9,13 @@ export default defineConfig(({ mode }) => {
       host: "0.0.0.0",
       port: 5174,
     },
-    plugins: [deepSeekInterpretationPlugin(env)],
+    plugins: [llmInterpretationPlugin(env)],
   };
 });
 
-function deepSeekInterpretationPlugin(env: Record<string, string>) {
+function llmInterpretationPlugin(env: Record<string, string>) {
   return {
-    name: "deepseek-interpretation-api",
+    name: "llm-interpretation-api",
     configureServer(server: {
       middlewares: {
         use: (
@@ -27,18 +27,32 @@ function deepSeekInterpretationPlugin(env: Record<string, string>) {
         ) => void;
       };
     }) {
-      server.middlewares.use("/api/deepseek/interpret", async (req, res) => {
+      const handler = async (
+        req: import("node:http").IncomingMessage,
+        res: import("node:http").ServerResponse,
+      ) => {
         if (req.method !== "POST") {
           sendJson(res, 405, { error: "Method not allowed" });
           return;
         }
 
-        const apiKey = env.DEEPSEEK_API_KEY;
+        const proxyAccessKey = env.PROXY_ACCESS_KEY?.trim();
+
+        if (
+          proxyAccessKey &&
+          req.headers["x-ziwei-proxy-key"] !== proxyAccessKey
+        ) {
+          sendJson(res, 401, { error: "Invalid backend access key" });
+          return;
+        }
+
+        const apiKey =
+          env.LLM_API_KEY || env.DEEPSEEK_API_KEY || env.OPENAI_API_KEY;
 
         if (!apiKey) {
           sendJson(res, 500, {
             error:
-              "Missing DEEPSEEK_API_KEY. Create .env.local in the project root.",
+              "Missing LLM_API_KEY. Create .env.local in the project root.",
           });
           return;
         }
@@ -53,7 +67,7 @@ function deepSeekInterpretationPlugin(env: Record<string, string>) {
           }
 
           const response = await fetch(
-            `${env.DEEPSEEK_BASE_URL || "https://api.deepseek.com"}/chat/completions`,
+            `${trimTrailingSlash(env.LLM_BASE_URL || env.DEEPSEEK_BASE_URL || "https://api.deepseek.com")}/chat/completions`,
             {
               method: "POST",
               headers: {
@@ -61,7 +75,8 @@ function deepSeekInterpretationPlugin(env: Record<string, string>) {
                 Authorization: `Bearer ${apiKey}`,
               },
               body: JSON.stringify({
-                model: env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+                model:
+                  env.LLM_MODEL || env.DEEPSEEK_MODEL || "deepseek-v4-pro",
                 messages: [
                   {
                     role: "system",
@@ -79,7 +94,7 @@ function deepSeekInterpretationPlugin(env: Record<string, string>) {
 
           if (!response.ok) {
             sendJson(res, response.status, {
-              error: data?.error?.message || "DeepSeek API request failed",
+              error: data?.error?.message || "LLM API request failed",
               details: data,
             });
             return;
@@ -95,7 +110,10 @@ function deepSeekInterpretationPlugin(env: Record<string, string>) {
             error: error instanceof Error ? error.message : "Unknown error",
           });
         }
-      });
+      };
+
+      server.middlewares.use("/api/llm/interpret", handler);
+      server.middlewares.use("/api/deepseek/interpret", handler);
     },
   };
 }
@@ -128,4 +146,8 @@ function sendJson(
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(body));
+}
+
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
 }

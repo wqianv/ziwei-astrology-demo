@@ -33,14 +33,19 @@ const sampleProfiles = [
 
 const deepSeekProgressSteps = [
   "整理紫微和八字数据",
-  "发送 DeepSeek 请求",
+  "发送 LLM 请求",
   "等待模型推理",
   "接收并拆分报告",
 ];
 
-const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-pro";
-const DEEPSEEK_API_KEY_STORAGE_KEY = "ziwei.deepseek.apiKey";
-const DEEPSEEK_MODEL_STORAGE_KEY = "ziwei.deepseek.model";
+const DEFAULT_LLM_BASE_URL = "https://api.deepseek.com";
+const DEFAULT_LLM_MODEL = "deepseek-v4-pro";
+const LLM_API_KEY_STORAGE_KEY = "ziwei.llm.apiKey";
+const LLM_BASE_URL_STORAGE_KEY = "ziwei.llm.baseUrl";
+const LLM_MODEL_STORAGE_KEY = "ziwei.llm.model";
+const LLM_PROXY_ACCESS_KEY_STORAGE_KEY = "ziwei.llm.proxyAccessKey";
+const LEGACY_DEEPSEEK_API_KEY_STORAGE_KEY = "ziwei.deepseek.apiKey";
+const LEGACY_DEEPSEEK_MODEL_STORAGE_KEY = "ziwei.deepseek.model";
 
 function App() {
   const [activeView, setActiveView] = useState<ActiveView>("ziwei");
@@ -499,12 +504,18 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
   const [deepSeekStartedAt, setDeepSeekStartedAt] = useState<number>();
   const [deepSeekElapsedSeconds, setDeepSeekElapsedSeconds] = useState(0);
   const [deepSeekApiKey, setDeepSeekApiKey] = useState("");
-  const [deepSeekModel, setDeepSeekModel] = useState(DEFAULT_DEEPSEEK_MODEL);
+  const [llmBaseUrl, setLLMBaseUrl] = useState(DEFAULT_LLM_BASE_URL);
+  const [deepSeekModel, setDeepSeekModel] = useState(DEFAULT_LLM_MODEL);
+  const [proxyAccessKey, setProxyAccessKey] = useState("");
   const [deepSeekApiKeySaved, setDeepSeekApiKeySaved] = useState(false);
+  const [proxyAccessKeySaved, setProxyAccessKeySaved] = useState(false);
   const [deepSeekSaveNotice, setDeepSeekSaveNotice] = useState("");
   const trimmedDeepSeekApiKey = deepSeekApiKey.trim();
+  const trimmedProxyAccessKey = proxyAccessKey.trim();
   const isGithubPages = window.location.hostname.endsWith("github.io");
-  const hasExternalProxy = Boolean(import.meta.env.VITE_DEEPSEEK_PROXY_URL);
+  const hasExternalProxy = Boolean(
+    import.meta.env.VITE_LLM_PROXY_URL || import.meta.env.VITE_DEEPSEEK_PROXY_URL,
+  );
   const shouldPromptForApiKey =
     isGithubPages && !hasExternalProxy && !trimmedDeepSeekApiKey;
   const parsedDeepSeekReport = useMemo(
@@ -518,17 +529,36 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
 
   useEffect(() => {
     const savedApiKey = window.localStorage.getItem(
-      DEEPSEEK_API_KEY_STORAGE_KEY,
+      LLM_API_KEY_STORAGE_KEY,
     );
-    const savedModel = window.localStorage.getItem(DEEPSEEK_MODEL_STORAGE_KEY);
+    const legacySavedApiKey = window.localStorage.getItem(
+      LEGACY_DEEPSEEK_API_KEY_STORAGE_KEY,
+    );
+    const savedBaseUrl = window.localStorage.getItem(LLM_BASE_URL_STORAGE_KEY);
+    const savedModel = window.localStorage.getItem(LLM_MODEL_STORAGE_KEY);
+    const legacySavedModel = window.localStorage.getItem(
+      LEGACY_DEEPSEEK_MODEL_STORAGE_KEY,
+    );
+    const savedProxyAccessKey = window.localStorage.getItem(
+      LLM_PROXY_ACCESS_KEY_STORAGE_KEY,
+    );
 
-    if (savedApiKey) {
-      setDeepSeekApiKey(savedApiKey);
+    if (savedApiKey || legacySavedApiKey) {
+      setDeepSeekApiKey(savedApiKey || legacySavedApiKey || "");
       setDeepSeekApiKeySaved(true);
     }
 
-    if (savedModel) {
-      setDeepSeekModel(savedModel);
+    if (savedBaseUrl) {
+      setLLMBaseUrl(savedBaseUrl);
+    }
+
+    if (savedModel || legacySavedModel) {
+      setDeepSeekModel(savedModel || legacySavedModel || DEFAULT_LLM_MODEL);
+    }
+
+    if (savedProxyAccessKey) {
+      setProxyAccessKey(savedProxyAccessKey);
+      setProxyAccessKeySaved(true);
     }
   }, []);
 
@@ -563,12 +593,32 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
     setDeepSeekSaveNotice("");
   };
 
+  const handleProxyAccessKeyChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setProxyAccessKey(event.target.value);
+    setProxyAccessKeySaved(false);
+    setDeepSeekSaveNotice("");
+  };
+
   const clearSavedDeepSeekApiKey = () => {
-    window.localStorage.removeItem(DEEPSEEK_API_KEY_STORAGE_KEY);
-    window.localStorage.removeItem(DEEPSEEK_MODEL_STORAGE_KEY);
+    window.localStorage.removeItem(LLM_API_KEY_STORAGE_KEY);
+    window.localStorage.removeItem(LLM_BASE_URL_STORAGE_KEY);
+    window.localStorage.removeItem(LLM_MODEL_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_DEEPSEEK_API_KEY_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_DEEPSEEK_MODEL_STORAGE_KEY);
     setDeepSeekApiKey("");
+    setLLMBaseUrl(DEFAULT_LLM_BASE_URL);
+    setDeepSeekModel(DEFAULT_LLM_MODEL);
     setDeepSeekApiKeySaved(false);
-    setDeepSeekSaveNotice("已清除本机浏览器保存的 DeepSeek API Key。");
+    setDeepSeekSaveNotice("已清除本机浏览器保存的 OpenAI 兼容接口配置。");
+  };
+
+  const clearSavedProxyAccessKey = () => {
+    window.localStorage.removeItem(LLM_PROXY_ACCESS_KEY_STORAGE_KEY);
+    setProxyAccessKey("");
+    setProxyAccessKeySaved(false);
+    setDeepSeekSaveNotice("已清除本机浏览器保存的后端访问密钥。");
   };
 
   const generateDeepSeekReport = async () => {
@@ -586,11 +636,13 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
               mode: "browser",
               prompt: result.prompt,
               apiKey: trimmedDeepSeekApiKey,
+              baseUrl: llmBaseUrl,
               model: deepSeekModel,
             }
           : {
               mode: "proxy",
               prompt: result.prompt,
+              accessKey: trimmedProxyAccessKey,
             },
       );
       setDeepSeekResult(response);
@@ -598,26 +650,42 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
       if (trimmedDeepSeekApiKey) {
         try {
           window.localStorage.setItem(
-            DEEPSEEK_API_KEY_STORAGE_KEY,
+            LLM_API_KEY_STORAGE_KEY,
             trimmedDeepSeekApiKey,
           );
+          window.localStorage.setItem(LLM_BASE_URL_STORAGE_KEY, llmBaseUrl);
           window.localStorage.setItem(
-            DEEPSEEK_MODEL_STORAGE_KEY,
+            LLM_MODEL_STORAGE_KEY,
             deepSeekModel,
           );
           setDeepSeekApiKeySaved(true);
           setDeepSeekSaveNotice(
-            "已在本机浏览器保存 API Key，下次打开本页面会自动带出。",
+            "已在本机浏览器保存 OpenAI 兼容接口配置，下次打开本页面会自动带出。",
           );
         } catch {
           setDeepSeekSaveNotice(
-            "报告已生成，但浏览器拒绝本地保存 API Key。",
+            "报告已生成，但浏览器拒绝本地保存接口配置。",
+          );
+        }
+      } else if (trimmedProxyAccessKey) {
+        try {
+          window.localStorage.setItem(
+            LLM_PROXY_ACCESS_KEY_STORAGE_KEY,
+            trimmedProxyAccessKey,
+          );
+          setProxyAccessKeySaved(true);
+          setDeepSeekSaveNotice(
+            "已在本机浏览器保存后端访问密钥，下次打开本页面会自动带出。",
+          );
+        } catch {
+          setDeepSeekSaveNotice(
+            "报告已生成，但浏览器拒绝本地保存后端访问密钥。",
           );
         }
       }
     } catch (error) {
       setDeepSeekError(
-        error instanceof Error ? error.message : "DeepSeek request failed",
+        error instanceof Error ? error.message : "LLM request failed",
       );
     } finally {
       setDeepSeekLoading(false);
@@ -631,14 +699,16 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
         <h3>{result.headline}</h3>
         <p>{result.summary}</p>
 
-        <div className="deepseek-config" aria-label="DeepSeek 连接配置">
+        <div className="deepseek-config" aria-label="LLM 连接配置">
           <div className="deepseek-config-header">
-            <strong>DeepSeek 连接</strong>
-            <span>{trimmedDeepSeekApiKey ? "浏览器直连" : "后端代理"}</span>
+            <strong>OpenAI 兼容接口</strong>
+            <span>
+              {trimmedDeepSeekApiKey ? "浏览器直连" : "Cloudflare Worker"}
+            </span>
           </div>
           <div className="deepseek-fields">
             <label>
-              <span>自己的 API Key</span>
+              <span>自己的模型 API Key</span>
               <input
                 type="password"
                 autoComplete="off"
@@ -648,29 +718,59 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
               />
             </label>
             <label>
+              <span>API Base URL</span>
+              <input
+                value={llmBaseUrl}
+                onChange={(event) => setLLMBaseUrl(event.target.value)}
+                placeholder={DEFAULT_LLM_BASE_URL}
+              />
+            </label>
+            <label>
               <span>模型</span>
               <input
                 value={deepSeekModel}
                 onChange={(event) => setDeepSeekModel(event.target.value)}
-                placeholder={DEFAULT_DEEPSEEK_MODEL}
+                placeholder={DEFAULT_LLM_MODEL}
+              />
+            </label>
+            <label>
+              <span>后端访问密钥</span>
+              <input
+                type="password"
+                autoComplete="off"
+                value={proxyAccessKey}
+                onChange={handleProxyAccessKeyChange}
+                placeholder="访问我们自建 Worker 的口令"
               />
             </label>
           </div>
           <p className="privacy-note">
-            API Key 只保存在你的浏览器本地，生成时由你的浏览器直接请求
-            DeepSeek；我们不会收集、保存或上传你的 Key。
+            模型 API Key 和后端访问密钥只保存在你的浏览器本地；浏览器直连时我们不会收集、
+            保存或上传你的模型 Key。走自建后端时，只会把后端访问密钥发给 Cloudflare
+            Worker 做准入校验。
           </p>
           {shouldPromptForApiKey && (
             <p className="deepseek-warning">
-              当前 GitHub Pages 未配置后端代理，请输入自己的 API Key 后生成。
+              当前 GitHub Pages 未配置 Cloudflare Worker，请输入自己的模型 API Key 后生成。
             </p>
           )}
-          {(deepSeekApiKeySaved || deepSeekSaveNotice) && (
+          {(deepSeekApiKeySaved ||
+            proxyAccessKeySaved ||
+            deepSeekSaveNotice) && (
             <div className="deepseek-local-row">
-              <span>{deepSeekSaveNotice || "已读取本机保存的 API Key。"}</span>
-              <button type="button" onClick={clearSavedDeepSeekApiKey}>
-                清除本机 Key
-              </button>
+              <span>{deepSeekSaveNotice || "已读取本机保存的连接配置。"}</span>
+              <div className="deepseek-local-actions">
+                {deepSeekApiKeySaved && (
+                  <button type="button" onClick={clearSavedDeepSeekApiKey}>
+                    清除模型配置
+                  </button>
+                )}
+                {proxyAccessKeySaved && (
+                  <button type="button" onClick={clearSavedProxyAccessKey}>
+                    清除后端密钥
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -682,7 +782,7 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
           disabled={deepSeekLoading}
         >
           {deepSeekLoading
-            ? "DeepSeek 生成中..."
+            ? "LLM 生成中..."
             : trimmedDeepSeekApiKey
               ? "用我的 Key 生成正式解读"
               : "用后端代理生成正式解读"}
@@ -693,7 +793,7 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
       {deepSeekLoading && (
         <section className="analysis-panel llm-progress-panel">
           <div className="llm-report-header">
-            <h3>DeepSeek Pro 正在生成</h3>
+            <h3>LLM 正在生成</h3>
             <span>{deepSeekElapsedSeconds}s</span>
           </div>
           <div className="progress-track">
@@ -719,7 +819,7 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
             ))}
           </div>
           <p>
-            Pro 模型可能需要几十秒。请求没有丢，返回后会自动按章节填入下面的报告模块。
+            推理模型可能需要几十秒。请求没有丢，返回后会自动按章节填入下面的报告模块。
           </p>
         </section>
       )}
@@ -727,9 +827,9 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
       {deepSeekResult && (
         <section className="analysis-panel llm-report-panel">
           <div className="llm-report-header">
-            <h3>DeepSeek 解读已生成</h3>
+            <h3>LLM 解读已生成</h3>
             <span>
-              {deepSeekResult.model || "deepseek"} ·{" "}
+              {deepSeekResult.model || "llm"} ·{" "}
               {deepSeekResult.source === "browser" ? "浏览器直连" : "后端代理"}
             </span>
           </div>
@@ -767,7 +867,7 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
             {parsedDeepSeekReport?.sections[section.id] ? (
               <>
                 <div className="section-llm-result">
-                  <span>DeepSeek 正式解读</span>
+                  <span>LLM 正式解读</span>
                   <MarkdownPreview
                     content={parsedDeepSeekReport.sections[section.id] || ""}
                     compact
@@ -779,7 +879,7 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
               <>
                 {deepSeekResult && (
                   <p className="section-missing">
-                    DeepSeek 本次没有返回这一节，先显示本地解释草案。
+                    LLM 本次没有返回这一节，先显示本地解释草案。
                   </p>
                 )}
                 <p>{section.plain}</p>

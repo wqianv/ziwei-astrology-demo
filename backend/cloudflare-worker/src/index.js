@@ -1,6 +1,6 @@
 const DEFAULT_ALLOWED_ORIGIN = "https://wqianv.github.io";
-const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
-const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-pro";
+const DEFAULT_LLM_BASE_URL = "https://api.deepseek.com";
+const DEFAULT_LLM_MODEL = "deepseek-v4-pro";
 
 const systemPrompt =
   "你负责把传统命理排盘解释成普通人能理解、可执行、不过度断言的中文报告。";
@@ -13,7 +13,11 @@ export default {
       return handleOptions(request, env);
     }
 
-    if (url.pathname !== "/api/deepseek/interpret") {
+    if (
+      !["/api/llm/interpret", "/api/deepseek/interpret"].includes(
+        url.pathname,
+      )
+    ) {
       return json({ error: "Not found" }, 404, request, env);
     }
 
@@ -25,8 +29,21 @@ export default {
       return json({ error: "Origin not allowed" }, 403, request, env);
     }
 
-    if (!env.DEEPSEEK_API_KEY) {
-      return json({ error: "Missing DEEPSEEK_API_KEY" }, 500, request, env);
+    const accessCheck = validateProxyAccessKey(request, env);
+
+    if (!accessCheck.ok) {
+      return json(
+        { error: accessCheck.error },
+        accessCheck.status,
+        request,
+        env,
+      );
+    }
+
+    const apiKey = providerApiKey(env);
+
+    if (!apiKey) {
+      return json({ error: "Missing LLM_API_KEY" }, 500, request, env);
     }
 
     let body;
@@ -47,16 +64,16 @@ export default {
       return json({ error: "Prompt is too long" }, 413, request, env);
     }
 
-    const deepSeekResponse = await fetch(
-      `${trimTrailingSlash(env.DEEPSEEK_BASE_URL || DEFAULT_DEEPSEEK_BASE_URL)}/chat/completions`,
+    const llmResponse = await fetch(
+      `${trimTrailingSlash(providerBaseUrl(env))}/chat/completions`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: env.DEEPSEEK_MODEL || body.model || DEFAULT_DEEPSEEK_MODEL,
+          model: providerModel(env),
           messages: [
             {
               role: "system",
@@ -72,15 +89,15 @@ export default {
         }),
       },
     );
-    const data = await deepSeekResponse.json();
+    const data = await llmResponse.json();
 
-    if (!deepSeekResponse.ok) {
+    if (!llmResponse.ok) {
       return json(
         {
-          error: data?.error?.message || "DeepSeek API request failed",
+          error: data?.error?.message || "LLM API request failed",
           details: data,
         },
-        deepSeekResponse.status,
+        llmResponse.status,
         request,
         env,
       );
@@ -129,9 +146,43 @@ function corsHeaders(request, env) {
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Ziwei-Proxy-Key",
     Vary: "Origin",
   };
+}
+
+function validateProxyAccessKey(request, env) {
+  const configuredAccessKey = env.PROXY_ACCESS_KEY?.trim();
+
+  if (!configuredAccessKey) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Missing PROXY_ACCESS_KEY",
+    };
+  }
+
+  if (request.headers.get("X-Ziwei-Proxy-Key")?.trim() !== configuredAccessKey) {
+    return {
+      ok: false,
+      status: 401,
+      error: "Invalid backend access key",
+    };
+  }
+
+  return { ok: true };
+}
+
+function providerApiKey(env) {
+  return env.LLM_API_KEY || env.DEEPSEEK_API_KEY || env.OPENAI_API_KEY;
+}
+
+function providerBaseUrl(env) {
+  return env.LLM_BASE_URL || env.DEEPSEEK_BASE_URL || DEFAULT_LLM_BASE_URL;
+}
+
+function providerModel(env) {
+  return env.LLM_MODEL || env.DEEPSEEK_MODEL || DEFAULT_LLM_MODEL;
 }
 
 function isAllowedOrigin(request, env) {
