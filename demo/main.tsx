@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import Markdown from "markdown-to-jsx";
 import { Iztrolabe } from "../src";
@@ -249,21 +249,23 @@ function App() {
         <div className="result-layout">
           <div className="primary-pane">
             {activeView === "ziwei" && (
-              <div className="chart-frame ziwei-frame">
-                <Iztrolabe
-                  birthday={birthday}
-                  birthTime={birthTime}
-                  birthdayType={birthdayType}
-                  gender={gender}
-                  horoscopeDate={new Date(`${horoscopeDate}T12:00:00`)}
-                  horoscopeHour={birthTime}
-                  lang={lang}
-                  astroType="heaven"
-                  centerPalaceAlign={centerPalaceAlign}
-                  isLeapMonth={isLeapMonth}
-                  fixLeap
-                  options={{ yearDivide: "exact" }}
-                />
+              <div className="chart-scroll-shell" aria-label="紫微斗数命盘">
+                <div className="chart-frame ziwei-frame">
+                  <Iztrolabe
+                    birthday={birthday}
+                    birthTime={birthTime}
+                    birthdayType={birthdayType}
+                    gender={gender}
+                    horoscopeDate={new Date(`${horoscopeDate}T12:00:00`)}
+                    horoscopeHour={birthTime}
+                    lang={lang}
+                    astroType="heaven"
+                    centerPalaceAlign={centerPalaceAlign}
+                    isLeapMonth={isLeapMonth}
+                    fixLeap
+                    options={{ yearDivide: "exact" }}
+                  />
+                </div>
               </div>
             )}
 
@@ -497,6 +499,7 @@ function ReferenceRail({
 }
 
 function InterpretationPanel({ result }: { result: InterpretationResult }) {
+  const reportRef = useRef<HTMLDivElement>(null);
   const [deepSeekResult, setDeepSeekResult] =
     useState<DeepSeekInterpretationResponse>();
   const [deepSeekError, setDeepSeekError] = useState("");
@@ -526,6 +529,10 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
   const hasSectionedDeepSeekReport = parsedDeepSeekReport
     ? hasParsedLLMSections(parsedDeepSeekReport)
     : false;
+  const hasProxyOption = hasExternalProxy || !isGithubPages;
+  const canGenerateDeepSeekReport = Boolean(
+    trimmedDeepSeekApiKey || (hasProxyOption && trimmedProxyAccessKey),
+  );
 
   useEffect(() => {
     const savedApiKey = window.localStorage.getItem(
@@ -585,6 +592,19 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
     return () => window.clearInterval(timer);
   }, [deepSeekLoading, deepSeekStartedAt]);
 
+  useEffect(() => {
+    if (!deepSeekResult) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      reportRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+  }, [deepSeekResult]);
+
   const handleDeepSeekApiKeyChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -622,6 +642,15 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
   };
 
   const generateDeepSeekReport = async () => {
+    if (!canGenerateDeepSeekReport) {
+      setDeepSeekError(
+        hasProxyOption
+          ? "请填写后端访问密钥，或填写自己的模型 API Key。"
+          : "当前环境没有可用后端代理，请填写自己的模型 API Key。",
+      );
+      return;
+    }
+
     setDeepSeekLoading(true);
     setDeepSeekError("");
     setDeepSeekResult(undefined);
@@ -701,7 +730,14 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
 
         <div className="deepseek-config" aria-label="LLM 连接配置">
           <div className="deepseek-config-header">
-            <strong>OpenAI 兼容接口</strong>
+            <div>
+              <strong>OpenAI 兼容接口</strong>
+              <small>
+                {trimmedDeepSeekApiKey
+                  ? "使用你自己的模型账号直连"
+                  : "使用我们配置的 Cloudflare Worker"}
+              </small>
+            </div>
             <span>
               {trimmedDeepSeekApiKey ? "浏览器直连" : "Cloudflare Worker"}
             </span>
@@ -776,22 +812,28 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
         </div>
 
         <button
-          className="deepseek-button"
+          className={`deepseek-button${deepSeekLoading ? " is-loading" : ""}`}
           type="button"
           onClick={generateDeepSeekReport}
-          disabled={deepSeekLoading}
+          disabled={deepSeekLoading || !canGenerateDeepSeekReport}
+          aria-busy={deepSeekLoading}
         >
           {deepSeekLoading
-            ? "LLM 生成中..."
+            ? `LLM 生成中 ${deepSeekElapsedSeconds}s`
             : trimmedDeepSeekApiKey
               ? "用我的 Key 生成正式解读"
               : "用后端代理生成正式解读"}
         </button>
+        {!canGenerateDeepSeekReport && (
+          <p className="deepseek-inline-hint">
+            先填写后端访问密钥，或填自己的模型 API Key。配置只保存在当前浏览器。
+          </p>
+        )}
         {deepSeekError && <p className="deepseek-error">{deepSeekError}</p>}
       </section>
 
       {deepSeekLoading && (
-        <section className="analysis-panel llm-progress-panel">
+        <section className="analysis-panel llm-progress-panel" aria-live="polite">
           <div className="llm-report-header">
             <h3>LLM 正在生成</h3>
             <span>{deepSeekElapsedSeconds}s</span>
@@ -825,7 +867,7 @@ function InterpretationPanel({ result }: { result: InterpretationResult }) {
       )}
 
       {deepSeekResult && (
-        <section className="analysis-panel llm-report-panel">
+        <section className="analysis-panel llm-report-panel" ref={reportRef}>
           <div className="llm-report-header">
             <h3>LLM 解读已生成</h3>
             <span>

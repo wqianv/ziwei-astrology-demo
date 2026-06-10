@@ -10,11 +10,13 @@ body {
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
     sans-serif;
+  overflow-x: hidden;
 }
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -22,10 +24,14 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 .demo-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(720px, 1fr);
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
 }
 
 .control-panel {
@@ -36,6 +42,11 @@ button {
   background: #22312f;
   color: #fffaf0;
   border-right: 1px solid rgba(36, 29, 25, 0.14);
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow: auto;
 }
 
 .brand-block {
@@ -114,6 +125,16 @@ select:focus {
   box-shadow: 0 0 0 2px rgba(231, 192, 107, 0.18);
 }
 
+.view-tabs button,
+.segmented button,
+.sample-row button,
+.deepseek-button,
+.deepseek-local-actions button,
+.bazi-reference-item button,
+.interpretation-reference-item button {
+  touch-action: manipulation;
+}
+
 .view-tabs,
 .segmented,
 .sample-row {
@@ -169,7 +190,7 @@ select:focus {
 
 .chart-stage {
   min-width: 0;
-  overflow: auto;
+  overflow: hidden auto;
   padding: 26px;
 }
 
@@ -200,7 +221,7 @@ select:focus {
 
 .result-layout {
   display: grid;
-  grid-template-columns: minmax(920px, 1fr) 330px;
+  grid-template-columns: minmax(0, 1fr) 330px;
   gap: 16px;
   max-width: 1520px;
   margin: 0 auto;
@@ -208,14 +229,27 @@ select:focus {
 }
 
 .primary-pane {
-  min-width: 920px;
+  min-width: 0;
+}
+
+.chart-scroll-shell {
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior-x: contain;
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(36, 29, 25, 0.18);
+  background: #fffaf0;
+}
+
+.chart-scroll-shell:focus-within {
+  outline: 2px solid rgba(47, 118, 104, 0.35);
+  outline-offset: 2px;
 }
 
 .chart-frame {
   min-width: 920px;
   margin: 0 auto;
   background: #fffaf0;
-  box-shadow: 0 16px 48px rgba(36, 29, 25, 0.18);
 }
 
 .ziwei-frame .iztro-astrolabe {
@@ -514,9 +548,20 @@ dd {
   gap: 12px;
 }
 
+.deepseek-config-header > div {
+  display: grid;
+  gap: 4px;
+}
+
 .deepseek-config-header strong {
   color: #241d19;
   font-size: 15px;
+}
+
+.deepseek-config-header small {
+  color: #6c5544;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .deepseek-config-header span {
@@ -585,6 +630,7 @@ dd {
 }
 
 .deepseek-button {
+  width: 100%;
   min-height: 38px;
   margin-top: 16px;
   border: 1px solid #2f7668;
@@ -595,12 +641,31 @@ dd {
 }
 
 .deepseek-button:disabled {
-  cursor: wait;
   opacity: 0.68;
+}
+
+.deepseek-button:disabled {
+  cursor: not-allowed;
+}
+
+.deepseek-button.is-loading:disabled {
+  cursor: wait;
+  opacity: 0.82;
+}
+
+.deepseek-error,
+.deepseek-inline-hint {
+  margin-top: 10px !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
 }
 
 .deepseek-error {
   color: #9f2f27 !important;
+}
+
+.deepseek-inline-hint {
+  color: #6c5544 !important;
 }
 
 .llm-report-panel {
@@ -876,8 +941,24 @@ dd {
   }
 
   .control-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    min-height: auto;
+    max-height: none;
+    position: static;
     border-right: 0;
     border-bottom: 1px solid rgba(36, 29, 25, 0.14);
+  }
+
+  .brand-block,
+  .view-tabs,
+  .sample-row {
+    grid-column: 1 / -1;
+  }
+
+  .brand-block p {
+    max-width: 720px;
   }
 
   .chart-stage {
@@ -908,8 +989,16 @@ dd {
 
   .reference-rail {
     position: static;
-    max-width: 920px;
+    max-width: none;
     width: 100%;
+  }
+
+  .result-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-scroll-shell {
+    margin: 0 auto;
   }
 
   .pillar-grid,
@@ -920,6 +1009,116 @@ dd {
 }
 
 @media (max-width: 680px) {
+  body {
+    background: #f8f3ea;
+  }
+
+  .control-panel {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 20px 16px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  h2 {
+    font-size: 25px;
+  }
+
+  .view-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-radius: 8px;
+    padding: 5px;
+    background: rgba(34, 49, 47, 0.96);
+  }
+
+  .view-tabs button {
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  .chart-stage {
+    padding: 14px 12px 22px;
+  }
+
+  .stage-header {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .birth-meta {
+    gap: 6px;
+  }
+
+  .birth-meta span {
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+
+  .result-layout {
+    gap: 12px;
+  }
+
+  .chart-scroll-shell {
+    border: 1px solid rgba(36, 29, 25, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(36, 29, 25, 0.12);
+  }
+
+  .chart-frame {
+    min-width: 860px;
+  }
+
+  .ziwei-frame .iztro-astrolabe {
+    min-height: 860px;
+  }
+
+  .bazi-summary,
+  .analysis-panel,
+  .pillar-card,
+  .reference-item,
+  .rail-heading,
+  .interpretation-hero,
+  .interpretation-card {
+    border-radius: 7px;
+    box-shadow: 0 8px 22px rgba(36, 29, 25, 0.08);
+  }
+
+  .bazi-summary,
+  .reference-item,
+  .interpretation-hero,
+  .interpretation-card,
+  .analysis-panel {
+    padding: 16px;
+  }
+
+  .bazi-summary h3 {
+    font-size: 34px;
+  }
+
+  .interpretation-hero h3 {
+    font-size: 28px;
+  }
+
+  .compact-pillars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .llm-report-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .llm-report-header span {
+    max-width: 100%;
+    border-radius: 6px;
+    line-height: 1.4;
+  }
+
   .deepseek-config-header,
   .deepseek-local-row {
     align-items: stretch;
@@ -940,5 +1139,14 @@ dd {
   .progress-steps,
   .luck-grid {
     grid-template-columns: 1fr;
+  }
+
+  .markdown-preview {
+    max-height: none;
+    padding: 12px;
+  }
+
+  .prompt-panel textarea {
+    min-height: 220px;
   }
 }
