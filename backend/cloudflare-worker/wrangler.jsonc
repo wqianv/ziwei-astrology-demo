@@ -4,8 +4,14 @@
   "main": "src/index.js",
   "compatibility_date": "2026-06-09",
   "vars": {
-    "ALLOWED_ORIGIN": "https://wqianv.github.io",
+    "ALLOWED_ORIGIN": "https://wqianv.github.io,https://tanxj.xyz",
     "LLM_BASE_URL": "https://api.deepseek.com",
     "LLM_MODEL": "deepseek-v4-pro"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "api.tanxj.xyz",
+      "custom_domain": true
+    }
+  ]
 }
