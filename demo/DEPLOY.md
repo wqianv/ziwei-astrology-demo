@@ -6,7 +6,7 @@ custom domain, and HTTPS certificate.
 
 ## Runtime shape
 
-- Cloudflare Pages serves `demo/dist` for `tanxj.xyz`.
+- Cloudflare Pages serves `demo/dist` for `tanxj.xyz` and `www.tanxj.xyz`.
 - Cloudflare Worker serves `api.tanxj.xyz`.
 - The Worker calls an OpenAI-compatible LLM provider and requires
   `X-Ziwei-Proxy-Key`.
@@ -35,7 +35,7 @@ LLM_API_KEY=...
 LLM_BASE_URL=https://api.deepseek.com
 LLM_MODEL=deepseek-v4-pro
 PROXY_ACCESS_KEY=...
-ALLOWED_ORIGIN=https://tanxj.xyz,http://tanxj.xyz
+ALLOWED_ORIGIN=https://tanxj.xyz,http://tanxj.xyz,https://www.tanxj.xyz,http://www.tanxj.xyz
 ```
 
 Legacy `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, and `DEEPSEEK_MODEL` are still
