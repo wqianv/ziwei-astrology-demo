@@ -26,13 +26,15 @@ Page({
     loading: false,
     elapsedSeconds: 0,
     generateButtonText: "生成原生解读",
-    loadingTip: "正在整理出生信息与本地摘要。",
+    loadingTip: "正在整理出生信息与命盘摘要。",
     error: "",
     saveNotice: "",
     profile: {},
     localCards: [],
     ziweiPalaces: [],
     ziweiKeyPalaces: [],
+    ziweiBoardCells: [],
+    selectedPalace: {},
     sections: reportSections.map((section) => ({
       id: section.id,
       title: section.title,
@@ -90,6 +92,28 @@ Page({
       genderOptions: decorateGenderOptions(genderIndex),
     });
     this.refreshProfile();
+  },
+
+  selectPalace(event) {
+    const palaceName = event.currentTarget.dataset.name;
+
+    if (!palaceName) {
+      return;
+    }
+
+    const selectedPalace = findPalaceByName(this.data.ziweiPalaces, palaceName);
+
+    if (!selectedPalace) {
+      return;
+    }
+
+    this.setData({
+      selectedPalace,
+      ziweiBoardCells: decorateBoardCells(
+        this.data.profile.ziwei.boardCells,
+        selectedPalace.name,
+      ),
+    });
   },
 
   openWebApp() {
@@ -194,12 +218,24 @@ Page({
       birthTimeIndex: this.data.birthTimeIndex,
       gender,
     });
+    const previousPalaceName =
+      this.data.selectedPalace && this.data.selectedPalace.name
+        ? this.data.selectedPalace.name
+        : "命宫";
+    const selectedPalace =
+      findPalaceByName(profile.ziwei.palaces, previousPalaceName) ||
+      profile.ziwei.mingPalace;
 
     this.setData({
       profile,
       localCards: buildLocalCards(profile),
       ziweiPalaces: profile.ziwei.palaces,
       ziweiKeyPalaces: profile.ziwei.keyPalaces,
+      ziweiBoardCells: decorateBoardCells(
+        profile.ziwei.boardCells,
+        selectedPalace.name,
+      ),
+      selectedPalace,
       hasReport: false,
       error: "",
       sections: reportSections.map((section) => ({
@@ -252,9 +288,20 @@ function decorateGenderOptions(activeIndex) {
   }));
 }
 
+function decorateBoardCells(cells, selectedName) {
+  return (cells || []).map((cell) => ({
+    ...cell,
+    isSelected: !cell.empty && cell.name === selectedName,
+  }));
+}
+
+function findPalaceByName(palaces, name) {
+  return (palaces || []).find((palace) => palace.name === name);
+}
+
 function loadingTipFor(seconds) {
   if (seconds < 8) {
-    return "正在整理出生信息与本地摘要。";
+    return "正在整理出生信息与命盘摘要。";
   }
 
   if (seconds < 25) {

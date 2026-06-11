@@ -64,8 +64,54 @@ function buildPrompt(profile) {
     ),
     "",
     "结构化数据：",
-    JSON.stringify(profile, null, 2),
+    JSON.stringify(compactProfileForPrompt(profile), null, 2),
   ].join("\n");
+}
+
+function compactProfileForPrompt(profile) {
+  const ziwei = profile.ziwei || {};
+
+  return {
+    birth: profile.birth,
+    bazi: profile.bazi,
+    ziwei: {
+      status: ziwei.status,
+      source: ziwei.source,
+      solarDate: ziwei.solarDate,
+      lunarDate: ziwei.lunarDate,
+      chineseDate: ziwei.chineseDate,
+      time: ziwei.time,
+      zodiac: ziwei.zodiac,
+      sign: ziwei.sign,
+      fiveElementsClass: ziwei.fiveElementsClass,
+      soul: ziwei.soul,
+      body: ziwei.body,
+      mingPalace: compactPalace(ziwei.mingPalace),
+      bodyPalace: compactPalace(ziwei.bodyPalace),
+      keyPalaces: (ziwei.keyPalaces || []).map(compactPalace),
+      palaces: (ziwei.palaces || []).map(compactPalace),
+      note: ziwei.note,
+    },
+  };
+}
+
+function compactPalace(palace) {
+  if (!palace) {
+    return undefined;
+  }
+
+  return {
+    name: palace.name,
+    branch: palace.branch,
+    focus: palace.focus,
+    isMing: palace.isMing,
+    isBody: palace.isBody,
+    isEmpty: palace.isEmpty,
+    majorStars: palace.majorStarsText,
+    minorStars: palace.minorStarsText,
+    adjectiveStars: palace.adjectiveStarsText,
+    decadal: palace.decadalText,
+  };
 }
 
 function parseLLMReport(markdown) {

@@ -51,6 +51,24 @@ const palaceNames = [
 ];
 
 const keyPalaceNames = ["命宫", "官禄", "财帛", "夫妻", "福德", "迁移", "疾厄"];
+const boardBranches = [
+  "巳",
+  "午",
+  "未",
+  "申",
+  "辰",
+  "",
+  "",
+  "酉",
+  "卯",
+  "",
+  "",
+  "戌",
+  "寅",
+  "丑",
+  "子",
+  "亥",
+];
 
 const palaceFocus = {
   命宫: "自我底色、行动方式",
@@ -277,6 +295,7 @@ function buildZiweiFromAstrolabe(astrolabe) {
     palaces.find((palace) => palace.isBody) ||
     palaces.find((palace) => palace.earthlyBranch === astrolabe.earthlyBranchOfBodyPalace) ||
     mingPalace;
+  const boardCells = buildBoardCells(palaces);
 
   return {
     status: "原生 iztro 排盘",
@@ -291,6 +310,7 @@ function buildZiweiFromAstrolabe(astrolabe) {
     soul: astrolabe.soul,
     body: astrolabe.body,
     palaces,
+    boardCells,
     mingPalace,
     bodyPalace,
     keyPalaces: keyPalaceNames
@@ -389,10 +409,12 @@ function buildZiweiPreview({ parsed, birthTimeIndex, yearStem }) {
   const bodyPalace =
     palaces.find((palace) => palace.earthlyBranch === branches[bodyBranchIndex]) ||
     mingPalace;
+  const boardCells = buildBoardCells(palaces);
 
   return {
     status: "原生十二宫预览",
     palaces,
+    boardCells,
     mingPalace,
     bodyPalace,
     keyPalaces: keyPalaceNames
@@ -400,6 +422,40 @@ function buildZiweiPreview({ parsed, birthTimeIndex, yearStem }) {
       .filter(Boolean),
     note: "原生版已展示十二宫结构预览；星曜、四化、大限与精细农历换算仍以网页版完整盘为准。",
   };
+}
+
+function buildBoardCells(palaces) {
+  return boardBranches.map((branch, index) => {
+    if (!branch) {
+      return {
+        key: `center-${index}`,
+        empty: true,
+      };
+    }
+
+    const palace = palaces.find((item) => item.earthlyBranch === branch);
+
+    if (!palace) {
+      return {
+        key: `missing-${branch}`,
+        empty: true,
+      };
+    }
+
+    return {
+      ...palace,
+      key: palace.name,
+      empty: false,
+      boardStarText: compactStarText(palace.majorStarsText),
+    };
+  });
+}
+
+function compactStarText(value) {
+  return String(value || "")
+    .replace(/\([^)]*\)/g, "")
+    .replace(/、/g, " ")
+    .trim();
 }
 
 function parseChineseDatePillars(chineseDate) {
