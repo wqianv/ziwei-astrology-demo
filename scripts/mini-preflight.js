@@ -23,6 +23,7 @@ function main() {
   checkComplianceCopy();
   checkVendorBundle();
   checkPackageScripts(packageJson);
+  checkDevToolsHelper(packageJson);
   checkTrackedSensitiveFiles();
   checkSourcePackageSize();
 
@@ -277,6 +278,41 @@ function checkPackageScripts(packageJson) {
 
   passIf(Boolean(scripts["mini:vendor"]), "package.json has mini:vendor", "package.json missing mini:vendor");
   passIf(Boolean(scripts["mini:preflight"]), "package.json has mini:preflight", "package.json missing mini:preflight");
+  passIf(Boolean(scripts["mini:preview"]), "package.json has mini:preview", "package.json missing mini:preview");
+  passIf(Boolean(scripts["mini:upload"]), "package.json has mini:upload", "package.json missing mini:upload");
+}
+
+function checkDevToolsHelper(packageJson) {
+  const scripts = packageJson.scripts || {};
+  const helper = readText("scripts/mini-devtools.js");
+  const readme = readText("miniprogram/README.md");
+
+  passIf(
+    fileExists("scripts/mini-devtools.js") &&
+      scripts["mini:preview"] === "node scripts/mini-devtools.js preview" &&
+      scripts["mini:upload"] === "node scripts/mini-devtools.js upload",
+    "WeChat DevTools helper is wired to package scripts",
+    "WeChat DevTools helper or package script wiring is missing",
+  );
+  passIf(
+    helper.includes('command === "preview"') &&
+      helper.includes('command === "upload"') &&
+      helper.includes("runPreflight()"),
+    "WeChat DevTools helper supports preview/upload with preflight",
+    "WeChat DevTools helper should support preview/upload and run preflight",
+  );
+  passIf(
+    helper.includes("Upload requires --version <version> and --desc <description>"),
+    "Upload helper requires version and description",
+    "Upload helper should require version and description before uploading",
+  );
+  passIf(
+    readme.includes("npm run mini:preview") &&
+      readme.includes("npm run mini:upload") &&
+      readme.includes("ziwei-mini-devtools"),
+    "README documents WeChat DevTools preview/upload flow",
+    "README should document preview/upload helper commands",
+  );
 }
 
 function checkTrackedSensitiveFiles() {
