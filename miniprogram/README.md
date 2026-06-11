@@ -20,9 +20,16 @@ flow for the core chart and LLM report experience.
 1. Open WeChat DevTools.
 2. Import this directory: `miniprogram`.
 3. Confirm `appid` in `project.config.json` matches the real Mini Program AppID.
-4. Run the home page, then open `设置与上线检查`.
-5. Save the backend access key on the settings page.
-6. Tap `打开原生排盘` and generate one native LLM report.
+4. Run the local Mini Program preflight:
+
+   ```bash
+   npm run mini:preflight
+   ```
+
+5. Run the home page, then open `设置与上线检查`.
+6. Save the backend access key on the settings page.
+7. Tap `打开原生排盘`, confirm the send-consent checkbox, and generate one
+   native LLM report.
 
 ## Required WeChat platform settings
 
@@ -73,6 +80,12 @@ Regenerate the vendor bundle after upgrading `iztro`:
 npm run mini:vendor
 ```
 
+Run this before a preview, upload, or review submission:
+
+```bash
+npm run mini:preflight
+```
+
 The native page still keeps the H5 entry because the web chart is more visual
 and useful for cross-checking during the备案 path.
 
@@ -80,6 +93,8 @@ and useful for cross-checking during the备案 path.
 
 - [x] Replace `touristappid` with the real AppID.
 - [x] Configure `https://api.tanxj.xyz` as request legal domain.
+- [x] Add a local Mini Program preflight script.
+- [ ] Run `npm run mini:preflight` before preview/upload.
 - [ ] Configure `https://www.tanxj.xyz` as web-view business domain.
 - [ ] Add any WeChat domain verification file to the production H5 root if
       requested by the platform.
