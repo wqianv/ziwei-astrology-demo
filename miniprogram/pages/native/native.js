@@ -31,6 +31,8 @@ Page({
     saveNotice: "",
     profile: {},
     localCards: [],
+    ziweiPalaces: [],
+    ziweiKeyPalaces: [],
     sections: reportSections.map((section) => ({
       id: section.id,
       title: section.title,
@@ -196,6 +198,8 @@ Page({
     this.setData({
       profile,
       localCards: buildLocalCards(profile),
+      ziweiPalaces: profile.ziwei.palaces,
+      ziweiKeyPalaces: profile.ziwei.keyPalaces,
       hasReport: false,
       error: "",
       sections: reportSections.map((section) => ({

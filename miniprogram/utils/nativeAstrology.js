@@ -27,6 +27,38 @@ const elementByStem = {
   癸: "水",
 };
 
+const palaceNames = [
+  "命宫",
+  "兄弟",
+  "夫妻",
+  "子女",
+  "财帛",
+  "疾厄",
+  "迁移",
+  "仆役",
+  "官禄",
+  "田宅",
+  "福德",
+  "父母",
+];
+
+const keyPalaceNames = ["命宫", "官禄", "财帛", "夫妻", "福德", "迁移", "疾厄"];
+
+const palaceFocus = {
+  命宫: "自我底色、行动方式",
+  兄弟: "同辈关系、协作节奏",
+  夫妻: "亲密关系、合作模式",
+  子女: "表达创造、长期传承",
+  财帛: "收入方式、资源管理",
+  疾厄: "压力来源、作息习惯",
+  迁移: "外部机会、环境变化",
+  仆役: "团队资源、人际支持",
+  官禄: "事业路径、职责定位",
+  田宅: "家庭根基、资产秩序",
+  福德: "精神能量、休息方式",
+  父母: "长辈支持、规则系统",
+};
+
 const birthTimes = [
   "早子 00:00-01:00",
   "丑 01:00-03:00",
@@ -73,6 +105,11 @@ function buildNativeProfile({ birthDate, birthTimeIndex, gender }) {
     yinYang: stems.indexOf(dayPillar.stem) % 2 === 0 ? "阳" : "阴",
   };
   const nominalAge = new Date().getFullYear() - parsed.year + 1;
+  const ziwei = buildZiweiPreview({
+    parsed,
+    birthTimeIndex,
+    yearStem: yearPillar.stem,
+  });
 
   return {
     birth: {
@@ -90,11 +127,7 @@ function buildNativeProfile({ birthDate, birthTimeIndex, gender }) {
       nominalAge,
       note: "原生小程序 MVP 使用轻量干支摘要；完整紫微斗数与精细农历换算以网页版完整盘为准。",
     },
-    ziwei: {
-      status: "完整紫微盘暂由网页版承载",
-      keyPalaces: ["命宫", "官禄", "财帛", "夫妻", "福德", "迁移", "疾厄"],
-      note: "原生版先提供结构化输入、八字摘要和 LLM 解读闭环，后续再迁移完整紫微盘面。",
-    },
+    ziwei,
   };
 }
 
@@ -121,7 +154,48 @@ function buildLocalCards(profile) {
       title: "五行可见",
       value: elementsText,
     },
+    {
+      title: "命宫预览",
+      value: `${profile.ziwei.mingPalace.branch} · ${profile.ziwei.mingPalace.focus}`,
+    },
   ];
+}
+
+function buildZiweiPreview({ parsed, birthTimeIndex, yearStem }) {
+  const hourBranchIndex = birthTimeIndex === 12 ? 0 : birthTimeIndex;
+  const mingBranchIndex = positiveMod(2 + parsed.month - 1 - hourBranchIndex, 12);
+  const bodyBranchIndex = positiveMod(2 + parsed.month - 1 + hourBranchIndex, 12);
+  const yearStemIndex = Math.max(0, stems.indexOf(yearStem));
+  const palaces = palaceNames.map((name, index) => {
+    const branchIndex = positiveMod(mingBranchIndex + index, 12);
+    const stem = stems[positiveMod(yearStemIndex * 2 + branchIndex, 10)];
+
+    return {
+      name,
+      heavenlyStem: stem,
+      earthlyBranch: branches[branchIndex],
+      branch: `${stem}${branches[branchIndex]}`,
+      focus: palaceFocus[name],
+      isMing: index === 0,
+      isBody: branchIndex === bodyBranchIndex,
+      starStatus: "星曜待接入完整盘",
+    };
+  });
+  const mingPalace = palaces[0];
+  const bodyPalace =
+    palaces.find((palace) => palace.earthlyBranch === branches[bodyBranchIndex]) ||
+    mingPalace;
+
+  return {
+    status: "原生十二宫预览",
+    palaces,
+    mingPalace,
+    bodyPalace,
+    keyPalaces: keyPalaceNames
+      .map((name) => palaces.find((palace) => palace.name === name))
+      .filter(Boolean),
+    note: "原生版已展示十二宫结构预览；星曜、四化、大限与精细农历换算仍以网页版完整盘为准。",
+  };
 }
 
 function parseDate(value) {
