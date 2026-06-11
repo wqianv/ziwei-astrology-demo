@@ -2,14 +2,14 @@
   <view class="hero">
     <view class="eyebrow">native mini program</view>
     <view class="title">原生排盘</view>
-    <view class="summary">出生信息、四柱摘要、十二宫预览和 LLM 解读都在小程序内完成；完整星曜盘仍可打开网页版校验。</view>
+    <view class="summary">出生信息、四柱摘要、紫微十二宫和 LLM 解读都在小程序内完成；网页版完整盘继续保留用于校验。</view>
   </view>
 
   <view class="panel form-panel">
     <view class="panel-heading">
       <view>
         <view class="panel-title">出生信息</view>
-        <view class="panel-note">本机计算轻量摘要，生成解读时才请求后端。</view>
+        <view class="panel-note">本机用 iztro 生成命盘摘要，生成解读时才请求后端。</view>
       </view>
     </view>
 
@@ -53,7 +53,7 @@
   <view class="panel ziwei-panel">
     <view class="panel-heading">
       <view>
-        <view class="panel-title">紫微十二宫预览</view>
+        <view class="panel-title">紫微十二宫</view>
         <view class="panel-note">{{profile.ziwei.note}}</view>
       </view>
     </view>
@@ -62,12 +62,12 @@
       <view class="focus-card">
         <view class="focus-label">命宫</view>
         <view class="focus-value">{{profile.ziwei.mingPalace.branch}}</view>
-        <view class="focus-text">{{profile.ziwei.mingPalace.focus}}</view>
+        <view class="focus-text">{{profile.ziwei.mingPalace.starStatus}} · {{profile.ziwei.mingPalace.focus}}</view>
       </view>
       <view class="focus-card">
         <view class="focus-label">身宫</view>
         <view class="focus-value">{{profile.ziwei.bodyPalace.branch}}</view>
-        <view class="focus-text">{{profile.ziwei.bodyPalace.name}} · {{profile.ziwei.bodyPalace.focus}}</view>
+        <view class="focus-text">{{profile.ziwei.bodyPalace.name}} · {{profile.ziwei.bodyPalace.starStatus}}</view>
       </view>
     </view>
 
@@ -82,10 +82,24 @@
           <view class="palace-branch">{{item.branch}}</view>
         </view>
         <view class="palace-text">{{item.focus}}</view>
+        <view class="palace-stars">
+          <view class="star-row">
+            <text class="star-label">主星</text>
+            <text class="star-value">{{item.majorStarsText}}</text>
+          </view>
+          <view class="star-row">
+            <text class="star-label">辅星</text>
+            <text class="star-value">{{item.minorStarsText}}</text>
+          </view>
+          <view class="star-row">
+            <text class="star-label">大限</text>
+            <text class="star-value">{{item.decadalText}}</text>
+          </view>
+        </view>
         <view class="palace-meta">
           <text wx:if="{{item.isMing}}" class="tag">命</text>
           <text wx:if="{{item.isBody}}" class="tag muted">身</text>
-          <text class="star-status">{{item.starStatus}}</text>
+          <text class="star-status">{{item.adjectiveStarsText}}</text>
         </view>
       </view>
     </view>
@@ -141,7 +155,7 @@
     <view class="section-card" wx:for="{{sections}}" wx:key="id">
       <view class="section-title">{{item.title}}</view>
       <view wx:if="{{item.hasContent}}" class="section-content">{{item.content}}</view>
-      <view wx:else class="section-empty">生成后会填入这一节。原生版当前使用轻量摘要，完整紫微盘请查看网页版。</view>
+      <view wx:else class="section-empty">生成后会填入这一节。原生版已接入紫微与四柱摘要，完整盘面仍可查看网页版。</view>
     </view>
   </view>
 

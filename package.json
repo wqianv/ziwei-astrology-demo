@@ -14,6 +14,7 @@
     "clean": "rimraf lib/",
     "copy-files": "copyfiles -u 1 src/**/*.css lib/",
     "build": "npm run clean && tsc && npm run copy-files",
+    "mini:vendor": "esbuild node_modules/iztro/lib/index.js --bundle --platform=browser --format=cjs --target=es2018 --minify --legal-comments=none --outfile=miniprogram/vendor/iztro.js",
     "build:sb": "storybook build",
     "build-storybook": "storybook build",
     "prepare": "npm run build",

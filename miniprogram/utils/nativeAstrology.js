@@ -1,3 +1,11 @@
+let iztroAstro;
+
+try {
+  iztroAstro = require("../vendor/iztro").astro;
+} catch (error) {
+  iztroAstro = undefined;
+}
+
 const stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
 const branches = [
   "子",
@@ -82,6 +90,81 @@ const genderOptions = [
 
 function buildNativeProfile({ birthDate, birthTimeIndex, gender }) {
   const parsed = parseDate(birthDate);
+  const genderText = gender === "female" ? "女" : "男";
+  const astrolabe = createAstrolabe({
+    birthDate,
+    birthTimeIndex,
+    genderText,
+  });
+
+  if (astrolabe) {
+    return buildIztroProfile({
+      astrolabe,
+      birthDate,
+      birthTimeIndex,
+      genderText,
+      parsed,
+    });
+  }
+
+  return buildFallbackProfile({
+    birthDate,
+    birthTimeIndex,
+    genderText,
+    parsed,
+  });
+}
+
+function buildIztroProfile({
+  astrolabe,
+  birthDate,
+  birthTimeIndex,
+  genderText,
+  parsed,
+}) {
+  const pillars = parseChineseDatePillars(astrolabe.chineseDate);
+  const elementCounts = countElements(pillars);
+  const strongestElements = elementCounts
+    .filter((item) => item.count === Math.max.apply(null, elementCounts.map((entry) => entry.count)))
+    .map((item) => item.name);
+  const missingElements = elementCounts
+    .filter((item) => item.count === 0)
+    .map((item) => item.name);
+  const dayPillar = pillars[2] || sexagenary(0);
+  const dayMaster = {
+    stem: dayPillar.stem,
+    element: dayPillar.element,
+    yinYang: stems.indexOf(dayPillar.stem) % 2 === 0 ? "阳" : "阴",
+  };
+  const nominalAge = new Date().getFullYear() - parsed.year + 1;
+  const ziwei = buildZiweiFromAstrolabe(astrolabe);
+
+  return {
+    birth: {
+      source: `阳历 ${astrolabe.solarDate || birthDate}`,
+      solar: astrolabe.solarDate || birthDate,
+      lunar: astrolabe.lunarDate || "",
+      chineseDate: astrolabe.chineseDate || "",
+      zodiac: astrolabe.zodiac || "",
+      sign: astrolabe.sign || "",
+      gender: genderText,
+      birthTime: birthTimes[birthTimeIndex] || birthTimes[0],
+      astrolabeTime: astrolabe.time || "",
+    },
+    bazi: {
+      dayMaster,
+      pillars,
+      elementCounts,
+      strongestElements,
+      missingElements,
+      nominalAge,
+      note: "原生版已通过 iztro 生成农历、四柱和紫微十二宫摘要；网页版完整盘继续保留用于详细盘面校验。",
+    },
+    ziwei,
+  };
+}
+
+function buildFallbackProfile({ birthDate, birthTimeIndex, genderText, parsed }) {
   const yearPillar = sexagenary(parsed.year - 4);
   const monthPillar = roughMonthPillar(parsed.year, parsed.month);
   const dayPillar = roughDayPillar(parsed.year, parsed.month, parsed.day);
@@ -115,8 +198,13 @@ function buildNativeProfile({ birthDate, birthTimeIndex, gender }) {
     birth: {
       source: `阳历 ${birthDate}`,
       solar: birthDate,
-      gender: gender === "female" ? "女" : "男",
+      lunar: "",
+      chineseDate: "",
+      zodiac: "",
+      sign: "",
+      gender: genderText,
       birthTime: birthTimes[birthTimeIndex] || birthTimes[0],
+      astrolabeTime: "",
     },
     bazi: {
       dayMaster,
@@ -125,7 +213,7 @@ function buildNativeProfile({ birthDate, birthTimeIndex, gender }) {
       strongestElements,
       missingElements,
       nominalAge,
-      note: "原生小程序 MVP 使用轻量干支摘要；完整紫微斗数与精细农历换算以网页版完整盘为准。",
+      note: "iztro vendor 不可用时回退到轻量干支摘要；完整紫微斗数与精细农历换算以网页版完整盘为准。",
     },
     ziwei,
   };
@@ -143,6 +231,12 @@ function buildLocalCards(profile) {
       value: `${profile.birth.source} · ${profile.birth.birthTime} · ${profile.birth.gender}`,
     },
     {
+      title: "农历 / 星座",
+      value: `${profile.birth.lunar || "农历待校验"} · ${profile.birth.zodiac || "-"} · ${
+        profile.birth.sign || "-"
+      }`,
+    },
+    {
       title: "四柱摘要",
       value: pillars,
     },
@@ -155,10 +249,111 @@ function buildLocalCards(profile) {
       value: elementsText,
     },
     {
-      title: "命宫预览",
-      value: `${profile.ziwei.mingPalace.branch} · ${profile.ziwei.mingPalace.focus}`,
+      title: "命宫主星",
+      value: formatPalaceLead(profile.ziwei.mingPalace),
     },
   ];
+}
+
+function createAstrolabe({ birthDate, birthTimeIndex, genderText }) {
+  if (!iztroAstro || typeof iztroAstro.bySolar !== "function") {
+    return undefined;
+  }
+
+  try {
+    return iztroAstro.bySolar(birthDate, birthTimeIndex, genderText, true, "zh-CN");
+  } catch (error) {
+    return undefined;
+  }
+}
+
+function buildZiweiFromAstrolabe(astrolabe) {
+  const palaces = palaceNames
+    .map((name) => astrolabe.palace(name))
+    .filter(Boolean)
+    .map(formatIztroPalace);
+  const mingPalace = palaces.find((palace) => palace.name === "命宫") || palaces[0];
+  const bodyPalace =
+    palaces.find((palace) => palace.isBody) ||
+    palaces.find((palace) => palace.earthlyBranch === astrolabe.earthlyBranchOfBodyPalace) ||
+    mingPalace;
+
+  return {
+    status: "原生 iztro 排盘",
+    source: "iztro",
+    solarDate: astrolabe.solarDate,
+    lunarDate: astrolabe.lunarDate,
+    chineseDate: astrolabe.chineseDate,
+    time: astrolabe.time,
+    zodiac: astrolabe.zodiac,
+    sign: astrolabe.sign,
+    fiveElementsClass: astrolabe.fiveElementsClass,
+    soul: astrolabe.soul,
+    body: astrolabe.body,
+    palaces,
+    mingPalace,
+    bodyPalace,
+    keyPalaces: keyPalaceNames
+      .map((name) => palaces.find((palace) => palace.name === name))
+      .filter(Boolean),
+    note: "原生版已接入 iztro 生成紫微十二宫、主星辅星和大限摘要；网页版完整盘继续保留用于详细盘面校验。",
+  };
+}
+
+function formatIztroPalace(palace) {
+  const majorStars = palace.majorStars.map(formatStar);
+  const minorStars = palace.minorStars.slice(0, 6).map(formatStar);
+  const adjectiveStars = palace.adjectiveStars.slice(0, 6).map((star) => star.name);
+  const decadalRange = palace.decadal && palace.decadal.range ? palace.decadal.range : [];
+  const majorStarsText = formatStarsText(majorStars, "无主星");
+  const minorStarsText = formatStarsText(minorStars, "辅星少");
+
+  return {
+    name: palace.name,
+    heavenlyStem: palace.heavenlyStem,
+    earthlyBranch: palace.earthlyBranch,
+    branch: `${palace.heavenlyStem}${palace.earthlyBranch}`,
+    focus: palaceFocus[palace.name],
+    isMing: palace.name === "命宫",
+    isBody: Boolean(palace.isBodyPalace),
+    isEmpty: typeof palace.isEmpty === "function" ? palace.isEmpty() : majorStars.length === 0,
+    majorStars,
+    minorStars,
+    adjectiveStars,
+    majorStarsText,
+    minorStarsText,
+    adjectiveStarsText: adjectiveStars.length ? adjectiveStars.join("、") : "杂曜少",
+    starStatus: majorStarsText,
+    decadalRange,
+    decadalText: decadalRange.length === 2 ? `${decadalRange[0]}-${decadalRange[1]} 岁` : "大限待校验",
+  };
+}
+
+function formatStar(star) {
+  return {
+    name: star.name,
+    brightness: star.brightness || "",
+    mutagen: star.mutagen || "",
+  };
+}
+
+function formatStarsText(stars, emptyText) {
+  if (!stars.length) {
+    return emptyText;
+  }
+
+  return stars
+    .map((star) => {
+      const extras = [star.brightness, star.mutagen].filter(Boolean).join("");
+      return extras ? `${star.name}(${extras})` : star.name;
+    })
+    .join("、");
+}
+
+function formatPalaceLead(palace) {
+  const branch = palace && palace.branch ? palace.branch : "-";
+  const stars = palace && palace.majorStarsText ? palace.majorStarsText : "无主星";
+  return `${branch} · ${stars}`;
 }
 
 function buildZiweiPreview({ parsed, birthTimeIndex, yearStem }) {
@@ -178,7 +373,16 @@ function buildZiweiPreview({ parsed, birthTimeIndex, yearStem }) {
       focus: palaceFocus[name],
       isMing: index === 0,
       isBody: branchIndex === bodyBranchIndex,
+      isEmpty: true,
+      majorStars: [],
+      minorStars: [],
+      adjectiveStars: [],
+      majorStarsText: "星曜待接入",
+      minorStarsText: "星曜待接入",
+      adjectiveStarsText: "星曜待接入",
       starStatus: "星曜待接入完整盘",
+      decadalRange: [],
+      decadalText: "大限待接入",
     };
   });
   const mingPalace = palaces[0];
@@ -196,6 +400,25 @@ function buildZiweiPreview({ parsed, birthTimeIndex, yearStem }) {
       .filter(Boolean),
     note: "原生版已展示十二宫结构预览；星曜、四化、大限与精细农历换算仍以网页版完整盘为准。",
   };
+}
+
+function parseChineseDatePillars(chineseDate) {
+  const names = ["年柱", "月柱", "日柱", "时柱"];
+  const parts = String(chineseDate || "").trim().split(/\s+/).slice(0, 4);
+
+  return names.map((name, index) => {
+    const raw = parts[index] || "";
+    const stem = raw.charAt(0) || stems[0];
+    const branch = raw.charAt(1) || branches[0];
+
+    return {
+      name,
+      stem,
+      branch,
+      ganzhi: stem && branch ? `${stem}${branch}` : raw,
+      element: elementByStem[stem] || "",
+    };
+  });
 }
 
 function parseDate(value) {

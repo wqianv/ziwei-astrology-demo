@@ -222,13 +222,12 @@
 .palace-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   margin-top: 4rpx;
 }
 
 .palace-card {
-  width: calc(50% - 7rpx);
-  min-height: 166rpx;
+  width: 100%;
+  min-height: 0;
   margin-top: 14rpx;
   border: 1rpx solid rgba(42, 111, 95, 0.12);
   border-radius: 10rpx;
@@ -273,6 +272,37 @@
   color: #31423b;
   font-size: 24rpx;
   line-height: 1.45;
+}
+
+.palace-stars {
+  margin-top: 12rpx;
+  border-radius: 8rpx;
+  padding: 10rpx 12rpx;
+  background: #f4f8f5;
+}
+
+.star-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  padding: 6rpx 0;
+}
+
+.star-label {
+  flex: 0 0 56rpx;
+  color: #71837c;
+  font-size: 22rpx;
+  line-height: 1.45;
+}
+
+.star-value {
+  flex: 1;
+  min-width: 0;
+  color: #26362f;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .palace-meta {
