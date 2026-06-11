@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/webview/webview",
+    "pages/compliance/compliance"
+  ],
+  "window": {
+    "navigationBarTitleText": "命理排盘",
+    "navigationBarBackgroundColor": "#22312f",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f1e8"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

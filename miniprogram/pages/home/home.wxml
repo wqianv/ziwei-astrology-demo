@@ -1,0 +1,33 @@
+<view class="page">
+  <view class="hero">
+    <view class="eyebrow">traditional astrology lab</view>
+    <view class="title">命理排盘工作台</view>
+    <view class="summary">紫微斗数、四柱八字与 LLM 解读的移动入口。</view>
+  </view>
+
+  <view class="actions">
+    <button class="primary" bindtap="openWebApp">打开排盘</button>
+    <button class="secondary" open-type="share">分享给朋友</button>
+  </view>
+
+  <view class="panel">
+    <view class="row" bindtap="openCompliance">
+      <view>
+        <view class="row-title">合规说明与使用边界</view>
+        <view class="row-text">传统文化参考、隐私与模型解读说明</view>
+      </view>
+      <view class="chevron">›</view>
+    </view>
+    <view class="row" bindtap="copyUrl">
+      <view>
+        <view class="row-title">复制网页版地址</view>
+        <view class="row-text">{{siteUrl}}</view>
+      </view>
+      <view class="chevron">›</view>
+    </view>
+  </view>
+
+  <view class="notice">
+    发布前需要在微信公众平台配置 web-view 业务域名。当前壳会打开线上 H5 版本。
+  </view>
+</view>
