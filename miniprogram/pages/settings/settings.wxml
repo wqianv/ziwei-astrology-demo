@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="eyebrow">settings</view>
     <view class="title">设置与上线检查</view>
-    <view class="summary">管理本机后端访问密钥，并确认微信平台需要放行的域名。</view>
+    <view class="summary">管理本机后端访问密钥、发送确认，并核对微信平台需要放行的域名。</view>
   </view>
 
   <view class="panel">
@@ -58,7 +58,7 @@
     <view class="row" bindtap="openNativeApp">
       <view>
         <view class="row-title">回到原生排盘</view>
-        <view class="row-text">用已保存密钥生成一次 LLM 解读</view>
+        <view class="row-text">用已保存密钥并勾选发送确认，生成一次 LLM 解读</view>
       </view>
       <view class="chevron">›</view>
     </view>

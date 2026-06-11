@@ -1,5 +1,6 @@
 const {
   API_URL,
+  LLM_CONSENT_STORAGE,
   PROXY_KEY_STORAGE,
   SHARE_TITLE,
   SITE_URL,
@@ -22,6 +23,7 @@ Page({
     genderOptions: decorateGenderOptions(0),
     proxyAccessKey: "",
     proxyKeySaved: false,
+    llmConsentAccepted: false,
     canGenerate: false,
     loading: false,
     elapsedSeconds: 0,
@@ -62,10 +64,17 @@ Page({
 
   syncProxyAccessKey() {
     const savedProxyAccessKey = wx.getStorageSync(PROXY_KEY_STORAGE) || "";
+    const llmConsentAccepted = wx.getStorageSync(LLM_CONSENT_STORAGE) === true;
+
     this.setData({
       proxyAccessKey: savedProxyAccessKey,
       proxyKeySaved: Boolean(savedProxyAccessKey.trim()),
-      canGenerate: Boolean(savedProxyAccessKey.trim()) && !this.data.loading,
+      llmConsentAccepted,
+      canGenerate: canGenerateReport({
+        accessKey: savedProxyAccessKey,
+        consentAccepted: llmConsentAccepted,
+        loading: this.data.loading,
+      }),
     });
   },
 
@@ -116,6 +125,22 @@ Page({
     });
   },
 
+  handleConsentChange(event) {
+    const values = event.detail.value || [];
+    const llmConsentAccepted = values.includes("accepted");
+
+    wx.setStorageSync(LLM_CONSENT_STORAGE, llmConsentAccepted);
+    this.setData({
+      llmConsentAccepted,
+      canGenerate: canGenerateReport({
+        accessKey: this.data.proxyAccessKey,
+        consentAccepted: llmConsentAccepted,
+        loading: this.data.loading,
+      }),
+      error: "",
+    });
+  },
+
   openWebApp() {
     wx.navigateTo({
       url: `/pages/webview/webview?url=${encodeURIComponent(SITE_URL)}`,
@@ -134,6 +159,13 @@ Page({
     if (!accessKey) {
       this.setData({
         error: "请先到设置页保存后端访问密钥。密钥只保存在本机微信里。",
+      });
+      return;
+    }
+
+    if (!this.data.llmConsentAccepted) {
+      this.setData({
+        error: "请先勾选发送确认。生成解读时会把当前出生信息和命盘摘要发送到后端。",
       });
       return;
     }
@@ -191,7 +223,11 @@ Page({
           matchedCount: parsed.matchedCount,
           hasReport: true,
           proxyKeySaved: true,
-          canGenerate: true,
+          canGenerate: canGenerateReport({
+            accessKey,
+            consentAccepted: this.data.llmConsentAccepted,
+            loading: true,
+          }),
           saveNotice: "已在本机微信保存后端访问密钥，下次打开会自动带出。",
         });
       },
@@ -204,7 +240,11 @@ Page({
         this.stopTimer();
         this.setData({
           loading: false,
-          canGenerate: true,
+          canGenerate: canGenerateReport({
+            accessKey: this.data.proxyAccessKey,
+            consentAccepted: this.data.llmConsentAccepted,
+            loading: false,
+          }),
           generateButtonText: "生成原生解读",
         });
       },
@@ -297,6 +337,10 @@ function decorateBoardCells(cells, selectedName) {
 
 function findPalaceByName(palaces, name) {
   return (palaces || []).find((palace) => palace.name === name);
+}
+
+function canGenerateReport({ accessKey, consentAccepted, loading }) {
+  return Boolean(String(accessKey || "").trim()) && Boolean(consentAccepted) && !loading;
 }
 
 function loadingTipFor(seconds) {

@@ -182,6 +182,20 @@
     <view wx:if="{{proxyKeySaved}}" class="notice success">{{saveNotice || '已读取本机保存的后端访问密钥。'}}</view>
     <view wx:else class="notice warning">还没有保存后端访问密钥。先去设置页保存，再回来生成解读。</view>
 
+    <checkbox-group class="consent-group" bindchange="handleConsentChange">
+      <label class="consent-row">
+        <checkbox
+          class="consent-checkbox"
+          value="accepted"
+          checked="{{llmConsentAccepted}}"
+          color="#2a6f5f"
+        />
+        <view class="consent-text">
+          我确认生成解读时，将当前出生信息、命盘摘要和必要请求内容发送到后端代理与模型服务；解读结果仅作传统文化与娱乐参考。
+        </view>
+      </label>
+    </checkbox-group>
+
     <button
       class="primary"
       loading="{{loading}}"

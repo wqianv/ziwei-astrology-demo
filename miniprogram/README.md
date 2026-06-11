@@ -59,11 +59,13 @@ without opening the H5 app:
 2. Local summary cards from the iztro astrolabe.
 3. Native Ziwei twelve-palace list with main stars, support stars, and decadal
    ranges.
-4. Backend access key managed on the settings page and saved in local WeChat
+4. Explicit send-consent checkbox before the native LLM request; the consent
+   flag is saved in local WeChat storage.
+5. Backend access key managed on the settings page and saved in local WeChat
    storage.
-5. `wx.request` to `https://api.tanxj.xyz/api/llm/interpret`.
-6. Progress and error states for slow or blocked LLM requests.
-7. Sectioned LLM report display.
+6. `wx.request` to `https://api.tanxj.xyz/api/llm/interpret`.
+7. Progress and error states for slow or blocked LLM requests.
+8. Sectioned LLM report display.
 
 Regenerate the vendor bundle after upgrading `iztro`:
 
@@ -82,6 +84,7 @@ and useful for cross-checking during the备案 path.
 - [ ] Add any WeChat domain verification file to the production H5 root if
       requested by the platform.
 - [ ] Save the backend access key from `设置与上线检查`.
+- [ ] Confirm the native send-consent checkbox before generating an LLM report.
 - [ ] Re-test sharing from the home page, native page, and web-view page.
 - [ ] Re-test the native LLM generation path inside WeChat DevTools and on a
       phone.

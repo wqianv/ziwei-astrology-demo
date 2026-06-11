@@ -3,9 +3,11 @@ const REQUEST_DOMAIN = "https://api.tanxj.xyz";
 const API_URL = `${REQUEST_DOMAIN}/api/llm/interpret`;
 const SHARE_TITLE = "命理排盘工作台";
 const PROXY_KEY_STORAGE = "ziwei-mini.proxyAccessKey";
+const LLM_CONSENT_STORAGE = "ziwei-mini.llmConsentAccepted";
 
 module.exports = {
   API_URL,
+  LLM_CONSENT_STORAGE,
   PROXY_KEY_STORAGE,
   REQUEST_DOMAIN,
   SITE_URL,
