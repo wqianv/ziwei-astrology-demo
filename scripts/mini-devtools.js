@@ -70,6 +70,10 @@ function upload(options) {
     fail("Upload requires --version <version> and --desc <description>.");
   }
 
+  if (options["confirm-upload"] !== true) {
+    fail("Upload requires --confirm-upload to create a WeChat backend draft.");
+  }
+
   runPreflight();
   ensureArtifactDir();
 
@@ -163,12 +167,13 @@ function printHelp() {
   console.log([
     "Usage:",
     "  npm run mini:preview",
-    "  npm run mini:upload -- --version <version> --desc <description>",
+    "  npm run mini:upload -- --version <version> --desc <description> --confirm-upload",
     "",
     "Options:",
     "  --port <port>           WeChat DevTools service port, default 21481",
     "  --qr-output <path>      Preview QR output path",
     "  --info-output <path>    Preview/upload info output path",
+    "  --confirm-upload        Required for upload; creates a WeChat backend draft",
   ].join("\n"));
 }
 

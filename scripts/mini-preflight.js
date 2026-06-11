@@ -307,9 +307,15 @@ function checkDevToolsHelper(packageJson) {
     "Upload helper should require version and description before uploading",
   );
   passIf(
+    helper.includes("confirm-upload") && helper.includes("WeChat backend draft"),
+    "Upload helper requires explicit upload confirmation",
+    "Upload helper should require --confirm-upload before creating a backend draft",
+  );
+  passIf(
     readme.includes("npm run mini:preview") &&
       readme.includes("npm run mini:upload") &&
-      readme.includes("ziwei-mini-devtools"),
+      readme.includes("ziwei-mini-devtools") &&
+      readme.includes("--confirm-upload"),
     "README documents WeChat DevTools preview/upload flow",
     "README should document preview/upload helper commands",
   );

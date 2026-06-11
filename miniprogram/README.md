@@ -100,11 +100,12 @@ Upload an experience-version draft only when you are ready to create a new
 Mini Program backend draft:
 
 ```bash
-npm run mini:upload -- --version 0.1.0 --desc "native iztro chart preview"
+npm run mini:upload -- --version 0.1.0 --desc "native iztro chart preview" --confirm-upload
 ```
 
 The upload command also runs `mini:preflight` first and requires both a version
-and description to reduce accidental blank uploads.
+and description. It also requires `--confirm-upload` because it creates a new
+draft in the WeChat Mini Program backend.
 
 The native page still keeps the H5 entry because the web chart is more visual
 and useful for cross-checking during the备案 path.
@@ -117,7 +118,7 @@ and useful for cross-checking during the备案 path.
 - [x] Add WeChat DevTools preview/upload helper scripts.
 - [ ] Run `npm run mini:preflight` before preview/upload.
 - [ ] Run `npm run mini:preview` and scan the QR code on a phone.
-- [ ] Upload an experience-version draft with `npm run mini:upload -- --version <version> --desc <description>`.
+- [ ] Upload an experience-version draft with `npm run mini:upload -- --version <version> --desc <description> --confirm-upload`.
 - [ ] Configure `https://www.tanxj.xyz` as web-view business domain.
 - [ ] Add any WeChat domain verification file to the production H5 root if
       requested by the platform.
