@@ -86,6 +86,26 @@ Run this before a preview, upload, or review submission:
 npm run mini:preflight
 ```
 
+Generate a QR code for phone preview through WeChat DevTools:
+
+```bash
+npm run mini:preview
+```
+
+The QR image and preview metadata are written to `/tmp/ziwei-mini-devtools/`.
+The command runs `mini:preflight` first, then calls the local WeChat DevTools
+CLI with this Mini Program project.
+
+Upload an experience-version draft only when you are ready to create a new
+Mini Program backend draft:
+
+```bash
+npm run mini:upload -- --version 0.1.0 --desc "native iztro chart preview"
+```
+
+The upload command also runs `mini:preflight` first and requires both a version
+and description to reduce accidental blank uploads.
+
 The native page still keeps the H5 entry because the web chart is more visual
 and useful for cross-checking during the备案 path.
 
@@ -94,7 +114,10 @@ and useful for cross-checking during the备案 path.
 - [x] Replace `touristappid` with the real AppID.
 - [x] Configure `https://api.tanxj.xyz` as request legal domain.
 - [x] Add a local Mini Program preflight script.
+- [x] Add WeChat DevTools preview/upload helper scripts.
 - [ ] Run `npm run mini:preflight` before preview/upload.
+- [ ] Run `npm run mini:preview` and scan the QR code on a phone.
+- [ ] Upload an experience-version draft with `npm run mini:upload -- --version <version> --desc <description>`.
 - [ ] Configure `https://www.tanxj.xyz` as web-view business domain.
 - [ ] Add any WeChat domain verification file to the production H5 root if
       requested by the platform.
