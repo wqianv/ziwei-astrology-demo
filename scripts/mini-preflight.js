@@ -18,6 +18,7 @@ function main() {
   checkDomains(config);
   checkPages(appJson);
   checkNativeFlow();
+  checkNativeRuntimeSmoke();
   checkWebviewFlow(config);
   checkComplianceCopy();
   checkVendorBundle();
@@ -129,6 +130,91 @@ function checkNativeFlow() {
   );
 }
 
+function checkNativeRuntimeSmoke() {
+  const {
+    buildLocalCards,
+    buildNativeProfile,
+  } = require(path.join(miniprogramRoot, "utils/nativeAstrology"));
+  const {
+    buildPrompt,
+    parseLLMReport,
+    reportSections,
+  } = require(path.join(miniprogramRoot, "utils/report"));
+  const profile = buildNativeProfile({
+    birthDate: "2003-10-12",
+    birthTimeIndex: 1,
+    gender: "male",
+  });
+  const boardCells = profile.ziwei && profile.ziwei.boardCells
+    ? profile.ziwei.boardCells
+    : [];
+  const palaces = profile.ziwei && profile.ziwei.palaces
+    ? profile.ziwei.palaces
+    : [];
+  const prompt = buildPrompt(profile);
+  const parsedReport = parseLLMReport(buildSampleMarkdownReport(reportSections));
+
+  passIf(
+    profile.ziwei && profile.ziwei.status === "原生 iztro 排盘",
+    "Runtime smoke uses bundled iztro rather than fallback charting",
+    "Runtime smoke fell back instead of using bundled iztro",
+  );
+  passIf(
+    profile.birth && profile.birth.lunar && profile.birth.chineseDate,
+    `Runtime smoke produced lunar and Chinese date: ${profile.birth.lunar}`,
+    "Runtime smoke did not produce lunar or Chinese date",
+  );
+  passIf(
+    palaces.length === 12,
+    "Runtime smoke produced 12 Ziwei palaces",
+    `Runtime smoke produced ${palaces.length} Ziwei palaces`,
+  );
+  passIf(
+    boardCells.length === 16 &&
+      boardCells.filter((cell) => !cell.empty).length === 12 &&
+      boardCells.filter((cell) => cell.empty).length === 4,
+    "Runtime smoke produced a 4x4 Ziwei board with 12 palace cells",
+    "Runtime smoke produced an invalid Ziwei board layout",
+  );
+  passIf(
+    boardCells.some((cell) => !cell.empty && cell.name === "命宫" && cell.isMing),
+    "Runtime smoke placed ming palace on the board",
+    "Runtime smoke did not place ming palace on the board",
+  );
+  passIf(
+    profile.ziwei.mingPalace &&
+      profile.ziwei.mingPalace.name === "命宫" &&
+      profile.ziwei.bodyPalace &&
+      profile.ziwei.bodyPalace.name,
+    "Runtime smoke identified ming/body palaces",
+    "Runtime smoke did not identify ming/body palaces",
+  );
+  passIf(
+    buildLocalCards(profile).some((card) => card.title === "命宫主星"),
+    "Runtime smoke produced native summary cards",
+    "Runtime smoke did not produce the native summary cards",
+  );
+  passIf(
+    prompt.includes("基础命盘摘要") &&
+      prompt.includes("结构化数据") &&
+      !prompt.includes("boardCells"),
+    "Runtime smoke built compact LLM prompt without UI board cells",
+    "Runtime smoke built an invalid or overly UI-heavy LLM prompt",
+  );
+  passIf(
+    prompt.length < 12000,
+    `Runtime smoke prompt remains within a conservative length: ${prompt.length} chars`,
+    `Runtime smoke prompt is unexpectedly long: ${prompt.length} chars`,
+    "warn",
+  );
+  passIf(
+    parsedReport.matchedCount === reportSections.length &&
+      parsedReport.sections.every((section) => section.hasContent),
+    "Runtime smoke parsed all LLM report sections",
+    "Runtime smoke failed to parse all LLM report sections",
+  );
+}
+
 function checkWebviewFlow(config) {
   const webviewWxml = readText("miniprogram/pages/webview/webview.wxml");
   const webviewJs = readText("miniprogram/pages/webview/webview.js");
@@ -143,6 +229,17 @@ function checkWebviewFlow(config) {
     "web-view route is constrained to SITE_URL",
     "web-view route should use SITE_URL",
   );
+}
+
+function buildSampleMarkdownReport(reportSections) {
+  return reportSections
+    .map((section) => [
+      `## ${section.title}`,
+      "人话解释：这是一段用于预检解析器的示例内容。",
+      "盘面依据：这里模拟模型按章节返回依据。",
+      "建议：这里模拟模型按章节返回建议。",
+    ].join("\n"))
+    .join("\n\n");
 }
 
 function checkComplianceCopy() {
