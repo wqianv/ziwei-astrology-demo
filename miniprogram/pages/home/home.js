@@ -5,6 +5,12 @@ Page({
     siteUrl: SITE_URL,
   },
 
+  openNativeApp() {
+    wx.navigateTo({
+      url: "/pages/native/native",
+    });
+  },
+
   openWebApp() {
     wx.navigateTo({
       url: `/pages/webview/webview?url=${encodeURIComponent(SITE_URL)}`,

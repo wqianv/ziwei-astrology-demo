@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/home/home",
+    "pages/native/native",
     "pages/webview/webview",
     "pages/compliance/compliance"
   ],

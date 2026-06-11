@@ -6,7 +6,8 @@
   </view>
 
   <view class="actions">
-    <button class="primary" bindtap="openWebApp">打开排盘</button>
+    <button class="primary" bindtap="openNativeApp">打开原生排盘</button>
+    <button class="secondary" bindtap="openWebApp">网页版完整盘</button>
     <button class="secondary" open-type="share">分享给朋友</button>
   </view>
 
@@ -28,6 +29,6 @@
   </view>
 
   <view class="notice">
-    发布前需要在微信公众平台配置 web-view 业务域名。当前壳会打开线上 H5 版本。
+    原生版先覆盖排盘输入、摘要和 LLM 解读闭环；网页版完整盘继续保留，用于查看完整紫微盘和备案路线。
   </view>
 </view>

@@ -1,0 +1,108 @@
+<view class="page">
+  <view class="hero">
+    <view class="eyebrow">native mini program</view>
+    <view class="title">原生排盘</view>
+    <view class="summary">先用原生页面完成出生信息、摘要和 LLM 解读闭环；完整紫微盘可继续打开网页版查看。</view>
+  </view>
+
+  <view class="panel form-panel">
+    <view class="panel-title">出生信息</view>
+
+    <picker mode="date" value="{{birthDate}}" bindchange="handleBirthDateChange">
+      <view class="field">
+        <view class="label">生日</view>
+        <view class="value">{{birthDate}}</view>
+      </view>
+    </picker>
+
+    <picker range="{{birthTimes}}" value="{{birthTimeIndex}}" bindchange="handleBirthTimeChange">
+      <view class="field">
+        <view class="label">时辰</view>
+        <view class="value">{{birthTimeText}}</view>
+      </view>
+    </picker>
+
+    <view class="field">
+      <view class="label">性别</view>
+      <view class="segmented">
+        <button
+          wx:for="{{genderOptions}}"
+          wx:key="value"
+          data-index="{{index}}"
+          class="seg-button {{item.active ? 'active' : ''}}"
+          bindtap="selectGender"
+        >
+          {{item.label}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <view class="summary-grid">
+    <view class="summary-card" wx:for="{{localCards}}" wx:key="title">
+      <view class="summary-title">{{item.title}}</view>
+      <view class="summary-value">{{item.value}}</view>
+    </view>
+  </view>
+
+  <view class="panel">
+    <view class="panel-title">LLM 解读</view>
+    <view class="field key-field">
+      <view class="label">后端访问密钥</view>
+      <input
+        class="key-input"
+        password
+        value="{{proxyAccessKey}}"
+        placeholder="访问 api.tanxj.xyz 的口令"
+        bindinput="handleProxyKeyInput"
+      />
+    </view>
+    <view class="privacy">密钥只保存在本机微信里；请求时会发送到 Cloudflare Worker 做准入校验。</view>
+
+    <view wx:if="{{proxyKeySaved || saveNotice}}" class="notice success">
+      <text>{{saveNotice || '已读取本机保存的后端访问密钥。'}}</text>
+      <button class="text-button" bindtap="clearProxyKey">清除</button>
+    </view>
+
+    <button
+      class="primary"
+      loading="{{loading}}"
+      disabled="{{loading || !proxyAccessKey}}"
+      bindtap="generateReport"
+    >
+      {{generateButtonText}}
+    </button>
+
+    <view wx:if="{{!proxyAccessKey}}" class="hint">先填写后端访问密钥，生成后会保存在本机微信。</view>
+    <view wx:if="{{error}}" class="notice error">{{error}}</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="panel progress-panel">
+    <view class="panel-title">正在生成</view>
+    <view class="progress-track">
+      <view class="progress-bar"></view>
+    </view>
+    <view class="privacy">DeepSeek Pro 可能需要几十秒，请保持页面打开。</view>
+  </view>
+
+  <view wx:if="{{hasReport}}" class="panel report-panel">
+    <view class="report-header">
+      <view>
+        <view class="panel-title">LLM 解读已生成</view>
+        <view class="privacy">{{reportMeta}}</view>
+      </view>
+      <view class="badge">{{matchedCount}} / 9</view>
+    </view>
+    <view class="privacy">{{usageText}}</view>
+  </view>
+
+  <view class="section-list">
+    <view class="section-card" wx:for="{{sections}}" wx:key="id">
+      <view class="section-title">{{item.title}}</view>
+      <view wx:if="{{item.hasContent}}" class="section-content">{{item.content}}</view>
+      <view wx:else class="section-empty">生成后会填入这一节。原生版当前使用轻量摘要，完整紫微盘请查看网页版。</view>
+    </view>
+  </view>
+
+  <button class="secondary web-entry" bindtap="openWebApp">查看网页版完整盘</button>
+</view>
