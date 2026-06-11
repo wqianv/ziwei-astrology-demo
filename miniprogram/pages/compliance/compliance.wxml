@@ -21,7 +21,7 @@
   <view class="section">
     <view class="section-title">隐私与密钥</view>
     <view class="paragraph">
-      出生信息用于当前排盘和解读生成。用户自行填写的模型 API Key 或后端访问密钥只保存在当前浏览器本地；走后端代理时，访问密钥仅用于准入校验。
+      出生信息用于当前排盘和解读生成。用户自行填写的模型 API Key 或后端访问密钥只保存在当前浏览器本地或本机微信存储；走后端代理时，访问密钥仅用于准入校验。
     </view>
   </view>
 

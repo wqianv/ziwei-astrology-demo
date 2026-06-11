@@ -1,4 +1,9 @@
-const { API_URL, SHARE_TITLE, SITE_URL } = require("../../config");
+const {
+  API_URL,
+  PROXY_KEY_STORAGE,
+  SHARE_TITLE,
+  SITE_URL,
+} = require("../../config");
 const {
   birthTimes,
   buildLocalCards,
@@ -6,8 +11,6 @@ const {
   genderOptions: baseGenderOptions,
 } = require("../../utils/nativeAstrology");
 const { buildPrompt, parseLLMReport, reportSections } = require("../../utils/report");
-
-const PROXY_KEY_STORAGE = "ziwei-mini.proxyAccessKey";
 
 Page({
   data: {
@@ -19,9 +22,11 @@ Page({
     genderOptions: decorateGenderOptions(0),
     proxyAccessKey: "",
     proxyKeySaved: false,
+    canGenerate: false,
     loading: false,
     elapsedSeconds: 0,
     generateButtonText: "生成原生解读",
+    loadingTip: "正在整理出生信息与本地摘要。",
     error: "",
     saveNotice: "",
     profile: {},
@@ -39,16 +44,25 @@ Page({
   },
 
   onLoad() {
-    const savedProxyAccessKey = wx.getStorageSync(PROXY_KEY_STORAGE) || "";
-    this.setData({
-      proxyAccessKey: savedProxyAccessKey,
-      proxyKeySaved: Boolean(savedProxyAccessKey),
-    });
+    this.syncProxyAccessKey();
     this.refreshProfile();
+  },
+
+  onShow() {
+    this.syncProxyAccessKey();
   },
 
   onUnload() {
     this.stopTimer();
+  },
+
+  syncProxyAccessKey() {
+    const savedProxyAccessKey = wx.getStorageSync(PROXY_KEY_STORAGE) || "";
+    this.setData({
+      proxyAccessKey: savedProxyAccessKey,
+      proxyKeySaved: Boolean(savedProxyAccessKey.trim()),
+      canGenerate: Boolean(savedProxyAccessKey.trim()) && !this.data.loading,
+    });
   },
 
   handleBirthDateChange(event) {
@@ -76,26 +90,15 @@ Page({
     this.refreshProfile();
   },
 
-  handleProxyKeyInput(event) {
-    this.setData({
-      proxyAccessKey: event.detail.value,
-      proxyKeySaved: false,
-      saveNotice: "",
-    });
-  },
-
-  clearProxyKey() {
-    wx.removeStorageSync(PROXY_KEY_STORAGE);
-    this.setData({
-      proxyAccessKey: "",
-      proxyKeySaved: false,
-      saveNotice: "已清除本机保存的后端访问密钥。",
-    });
-  },
-
   openWebApp() {
     wx.navigateTo({
       url: `/pages/webview/webview?url=${encodeURIComponent(SITE_URL)}`,
+    });
+  },
+
+  openSettings() {
+    wx.navigateTo({
+      url: "/pages/settings/settings",
     });
   },
 
@@ -104,7 +107,7 @@ Page({
 
     if (!accessKey) {
       this.setData({
-        error: "请先填写后端访问密钥。密钥只保存在本机微信里。",
+        error: "请先到设置页保存后端访问密钥。密钥只保存在本机微信里。",
       });
       return;
     }
@@ -116,6 +119,8 @@ Page({
       loading: true,
       elapsedSeconds: 0,
       generateButtonText: "LLM 生成中 0s",
+      loadingTip: loadingTipFor(0),
+      canGenerate: false,
       error: "",
       saveNotice: "",
       hasReport: false,
@@ -127,6 +132,7 @@ Page({
     wx.request({
       url: API_URL,
       method: "POST",
+      timeout: 120000,
       header: {
         "Content-Type": "application/json",
         "X-Ziwei-Proxy-Key": accessKey,
@@ -137,9 +143,7 @@ Page({
       success: (response) => {
         if (response.statusCode < 200 || response.statusCode >= 300) {
           this.setData({
-            error:
-              (response.data && response.data.error) ||
-              `LLM 请求失败：${response.statusCode}`,
+            error: formatRequestError(response.statusCode, response.data),
           });
           return;
         }
@@ -161,18 +165,20 @@ Page({
           matchedCount: parsed.matchedCount,
           hasReport: true,
           proxyKeySaved: true,
+          canGenerate: true,
           saveNotice: "已在本机微信保存后端访问密钥，下次打开会自动带出。",
         });
       },
-      fail: () => {
+      fail: (error) => {
         this.setData({
-          error: "网络请求失败。请确认 api.tanxj.xyz 已配置为 request 合法域名。",
+          error: formatNetworkError(error),
         });
       },
       complete: () => {
         this.stopTimer();
         this.setData({
           loading: false,
+          canGenerate: true,
           generateButtonText: "生成原生解读",
         });
       },
@@ -208,6 +214,7 @@ Page({
       this.setData({
         elapsedSeconds: nextElapsedSeconds,
         generateButtonText: `LLM 生成中 ${nextElapsedSeconds}s`,
+        loadingTip: loadingTipFor(nextElapsedSeconds),
       });
     }, 1000);
   },
@@ -239,4 +246,61 @@ function decorateGenderOptions(activeIndex) {
     ...item,
     active: index === activeIndex,
   }));
+}
+
+function loadingTipFor(seconds) {
+  if (seconds < 8) {
+    return "正在整理出生信息与本地摘要。";
+  }
+
+  if (seconds < 25) {
+    return "正在请求 DeepSeek Pro，通常需要多等一会儿。";
+  }
+
+  if (seconds < 55) {
+    return "模型还在生成分项解读，请保持页面打开。";
+  }
+
+  return "这次请求偏慢；如果超过 2 分钟，可以稍后重试。";
+}
+
+function formatRequestError(statusCode, data) {
+  const rawError =
+    data && typeof data.error === "string" ? data.error : "后端没有返回明确错误";
+
+  if (statusCode === 401) {
+    return "后端访问密钥不正确。请到设置页重新保存密钥后再试。";
+  }
+
+  if (statusCode === 403) {
+    return "后端拒绝了这次请求。请检查 Worker 允许来源配置，或确认当前环境是小程序 request。";
+  }
+
+  if (statusCode === 400 && rawError.includes("Missing prompt")) {
+    return "请求内容为空。请返回修改出生信息后再重新生成。";
+  }
+
+  if (statusCode === 413) {
+    return "本次解读内容过长，后端已拒绝。可以减少附加信息后重试。";
+  }
+
+  if (statusCode >= 500) {
+    return `后端或模型服务暂时异常（${statusCode}）：${rawError}`;
+  }
+
+  return `LLM 请求失败（${statusCode}）：${rawError}`;
+}
+
+function formatNetworkError(error) {
+  const message = error && error.errMsg ? error.errMsg : "";
+
+  if (message.includes("url not in domain list")) {
+    return "请求被微信拦截。请在小程序后台把 https://api.tanxj.xyz 配置为 request 合法域名。";
+  }
+
+  if (message.includes("timeout")) {
+    return "请求超时。DeepSeek Pro 有时较慢，可以稍后重试。";
+  }
+
+  return "网络请求失败。请确认手机网络正常，并且 api.tanxj.xyz 已配置为 request 合法域名。";
 }

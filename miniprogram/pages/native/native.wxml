@@ -46,34 +46,29 @@
   </view>
 
   <view class="panel">
-    <view class="panel-title">LLM 解读</view>
-    <view class="field key-field">
-      <view class="label">后端访问密钥</view>
-      <input
-        class="key-input"
-        password
-        value="{{proxyAccessKey}}"
-        placeholder="访问 api.tanxj.xyz 的口令"
-        bindinput="handleProxyKeyInput"
-      />
+    <view class="report-header">
+      <view>
+        <view class="panel-title">LLM 解读</view>
+        <view class="privacy">请求会发送到 Cloudflare Worker；后端访问密钥只保存在本机微信。</view>
+      </view>
+      <button class="text-button" bindtap="openSettings">
+        {{proxyKeySaved ? '更换密钥' : '设置密钥'}}
+      </button>
     </view>
-    <view class="privacy">密钥只保存在本机微信里；请求时会发送到 Cloudflare Worker 做准入校验。</view>
 
-    <view wx:if="{{proxyKeySaved || saveNotice}}" class="notice success">
-      <text>{{saveNotice || '已读取本机保存的后端访问密钥。'}}</text>
-      <button class="text-button" bindtap="clearProxyKey">清除</button>
-    </view>
+    <view wx:if="{{proxyKeySaved}}" class="notice success">{{saveNotice || '已读取本机保存的后端访问密钥。'}}</view>
+    <view wx:else class="notice warning">还没有保存后端访问密钥。先去设置页保存，再回来生成解读。</view>
 
     <button
       class="primary"
       loading="{{loading}}"
-      disabled="{{loading || !proxyAccessKey}}"
+      disabled="{{loading || !canGenerate}}"
       bindtap="generateReport"
     >
       {{generateButtonText}}
     </button>
 
-    <view wx:if="{{!proxyAccessKey}}" class="hint">先填写后端访问密钥，生成后会保存在本机微信。</view>
+    <button wx:if="{{!proxyKeySaved}}" class="secondary compact-action" bindtap="openSettings">去设置访问密钥</button>
     <view wx:if="{{error}}" class="notice error">{{error}}</view>
   </view>
 
@@ -82,7 +77,7 @@
     <view class="progress-track">
       <view class="progress-bar"></view>
     </view>
-    <view class="privacy">DeepSeek Pro 可能需要几十秒，请保持页面打开。</view>
+    <view class="privacy">{{loadingTip}}</view>
   </view>
 
   <view wx:if="{{hasReport}}" class="panel report-panel">

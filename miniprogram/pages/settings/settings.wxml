@@ -1,0 +1,73 @@
+<view class="page">
+  <view class="hero">
+    <view class="eyebrow">settings</view>
+    <view class="title">设置与上线检查</view>
+    <view class="summary">管理本机后端访问密钥，并确认微信平台需要放行的域名。</view>
+  </view>
+
+  <view class="panel">
+    <view class="panel-title">后端访问密钥</view>
+    <view class="field">
+      <view class="label">访问 api.tanxj.xyz 的口令</view>
+      <input
+        class="key-input"
+        password
+        value="{{proxyAccessKey}}"
+        placeholder="粘贴后端访问密钥"
+        bindinput="handleProxyKeyInput"
+      />
+    </view>
+    <view class="hint">密钥只保存在当前微信本机存储里；生成解读时会作为请求头发给 Worker 做准入校验。</view>
+
+    <button class="primary" disabled="{{!proxyAccessKey}}" bindtap="saveProxyKey">保存到本机微信</button>
+    <button wx:if="{{proxyKeySaved}}" class="secondary" bindtap="clearProxyKey">清除本机密钥</button>
+
+    <view wx:if="{{notice}}" class="notice {{noticeType}}">{{notice}}</view>
+  </view>
+
+  <view class="panel">
+    <view class="panel-title">微信平台域名</view>
+
+    <view class="domain-row">
+      <view class="domain-main">
+        <view class="domain-title">request 合法域名</view>
+        <view class="domain-value">{{requestDomain}}</view>
+      </view>
+      <button class="copy-button" data-value="{{requestDomain}}" bindtap="copyValue">复制</button>
+    </view>
+
+    <view class="domain-row">
+      <view class="domain-main">
+        <view class="domain-title">web-view 业务域名</view>
+        <view class="domain-value">{{webviewDomain}}</view>
+      </view>
+      <button class="copy-button" data-value="{{webviewDomain}}" bindtap="copyValue">复制</button>
+    </view>
+
+    <view class="domain-row">
+      <view class="domain-main">
+        <view class="domain-title">LLM 请求接口</view>
+        <view class="domain-value">{{apiUrl}}</view>
+      </view>
+      <button class="copy-button" data-value="{{apiUrl}}" bindtap="copyValue">复制</button>
+    </view>
+  </view>
+
+  <view class="panel">
+    <view class="panel-title">下一步测试</view>
+    <view class="row" bindtap="openNativeApp">
+      <view>
+        <view class="row-title">回到原生排盘</view>
+        <view class="row-text">用已保存密钥生成一次 LLM 解读</view>
+      </view>
+      <view class="chevron">›</view>
+    </view>
+    <view class="row" bindtap="openCompliance">
+      <view>
+        <view class="row-title">合规说明</view>
+        <view class="row-text">查看隐私、娱乐参考与使用边界文案</view>
+      </view>
+      <view class="chevron">›</view>
+    </view>
+  </view>
+</view>

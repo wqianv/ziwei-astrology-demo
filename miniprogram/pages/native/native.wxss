@@ -60,8 +60,7 @@
   line-height: 1.4;
 }
 
-.value,
-.key-input {
+.value {
   min-height: 76rpx;
   margin-top: 8rpx;
   border: 1rpx solid rgba(36, 29, 25, 0.13);
@@ -170,6 +169,12 @@
   color: #2f7668;
 }
 
+.notice.warning {
+  display: block;
+  background: rgba(231, 192, 107, 0.2);
+  color: #765121;
+}
+
 .notice.error {
   display: block;
   background: rgba(159, 47, 39, 0.09);
@@ -178,12 +183,20 @@
 
 .text-button {
   flex: 0 0 auto;
+  max-width: 176rpx;
   height: 50rpx;
   line-height: 50rpx;
   padding: 0 18rpx;
   background: #fffaf0;
   color: #2f7668;
   font-size: 23rpx;
+}
+
+.compact-action {
+  height: 72rpx;
+  line-height: 72rpx;
+  margin-top: 14rpx;
+  font-size: 27rpx;
 }
 
 .progress-track {
@@ -198,7 +211,8 @@
   width: 76%;
   height: 100%;
   border-radius: inherit;
-  background: #2f7668;
+  background: linear-gradient(90deg, #2f7668, #e7c06b, #2f7668);
+  animation: progressPulse 1.4s ease-in-out infinite alternate;
 }
 
 .report-header {
@@ -248,4 +262,14 @@
 
 .web-entry {
   margin-top: 24rpx;
+}
+
+@keyframes progressPulse {
+  from {
+    transform: translateX(-18%);
+  }
+
+  to {
+    transform: translateX(22%);
+  }
 }

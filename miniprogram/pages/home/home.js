@@ -23,6 +23,12 @@ Page({
     });
   },
 
+  openSettings() {
+    wx.navigateTo({
+      url: "/pages/settings/settings",
+    });
+  },
+
   copyUrl() {
     wx.setClipboardData({
       data: SITE_URL,

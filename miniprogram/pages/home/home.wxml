@@ -12,6 +12,13 @@
   </view>
 
   <view class="panel">
+    <view class="row" bindtap="openSettings">
+      <view>
+        <view class="row-title">设置与上线检查</view>
+        <view class="row-text">保存后端访问密钥、复制微信平台域名</view>
+      </view>
+      <view class="chevron">›</view>
+    </view>
     <view class="row" bindtap="openCompliance">
       <view>
         <view class="row-title">合规说明与使用边界</view>
