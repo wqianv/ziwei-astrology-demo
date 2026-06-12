@@ -117,6 +117,11 @@
   color: #6d5520;
 }
 
+.notice.error {
+  background: rgba(159, 47, 39, 0.09);
+  color: #9f2f27;
+}
+
 .domain-row,
 .row {
   display: flex;

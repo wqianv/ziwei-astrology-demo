@@ -21,8 +21,18 @@
 
     <button class="primary" disabled="{{!proxyAccessKey}}" bindtap="saveProxyKey">保存到本机微信</button>
     <button wx:if="{{proxyKeySaved}}" class="secondary" bindtap="clearProxyKey">清除本机密钥</button>
+    <button
+      class="secondary"
+      loading="{{testingBackend}}"
+      disabled="{{testingBackend || !proxyAccessKey}}"
+      bindtap="testBackend"
+    >
+      测试后端连接
+    </button>
+    <view class="hint">测试会发送一次最小提示词到 Worker 和模型服务，用于确认合法域名、访问密钥和后端链路是否正常。</view>
 
     <view wx:if="{{notice}}" class="notice {{noticeType}}">{{notice}}</view>
+    <view wx:if="{{backendTestResult}}" class="notice {{backendTestType}}">{{backendTestResult}}</view>
   </view>
 
   <view class="panel">

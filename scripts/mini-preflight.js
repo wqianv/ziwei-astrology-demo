@@ -18,6 +18,7 @@ function main() {
   checkDomains(config);
   checkPages(appJson);
   checkNativeFlow();
+  checkSettingsFlow();
   checkNativeRuntimeSmoke();
   checkWebviewFlow(config);
   checkComplianceCopy();
@@ -128,6 +129,27 @@ function checkNativeFlow() {
     "LLM prompt compacts UI-only board data",
     "LLM prompt may include UI-only board data",
     "warn",
+  );
+}
+
+function checkSettingsFlow() {
+  const settingsJs = readText("miniprogram/pages/settings/settings.js");
+  const settingsWxml = readText("miniprogram/pages/settings/settings.wxml");
+
+  passIf(
+    settingsJs.includes("testBackend") &&
+      settingsJs.includes("wx.request") &&
+      settingsJs.includes("formatBackendTestError") &&
+      settingsWxml.includes("测试后端连接"),
+    "Settings page can test backend connectivity without exposing the key",
+    "Settings page should include a backend connectivity test button and request flow",
+  );
+  passIf(
+    settingsJs.includes("url not in domain list") &&
+      settingsJs.includes("后端访问密钥不正确") &&
+      settingsJs.includes("api.tanxj.xyz"),
+    "Settings backend test explains domain, key, and network failures",
+    "Settings backend test should translate common domain/key/network failures",
   );
 }
 

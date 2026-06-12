@@ -10,7 +10,7 @@ flow for the core chart and LLM report experience.
 - Native birth form, iztro-backed Ziwei/Four-Pillars summary, Worker-backed LLM
   request, and sectioned report display.
 - Settings page for local backend access key management and launch-domain
-  checklist.
+  checklist, plus a minimal backend connectivity test.
 - `web-view` page that opens the production H5 app for the complete Ziwei chart.
 - Share entry through the home page and the web-view page.
 - Compliance and usage-boundary page for review-friendly wording.
@@ -28,7 +28,9 @@ flow for the core chart and LLM report experience.
 
 5. Run the home page, then open `设置与上线检查`.
 6. Save the backend access key on the settings page.
-7. Tap `打开原生排盘`, confirm the send-consent checkbox, and generate one
+7. Tap `测试后端连接` to verify the request legal domain, backend access key,
+   Worker, and model link.
+8. Tap `打开原生排盘`, confirm the send-consent checkbox, and generate one
    native LLM report.
 
 ## Required WeChat platform settings
@@ -123,7 +125,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 66 checks.
+- `npm run mini:preflight` passes with 68 checks.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 530 KB.
@@ -151,6 +153,7 @@ The latest local preview QR was written to:
 - [ ] Add any WeChat domain verification file to the production H5 root if
       requested by the platform.
 - [ ] Save the backend access key from `设置与上线检查`.
+- [ ] Run `测试后端连接` successfully on a phone.
 - [ ] Confirm the native send-consent checkbox before generating an LLM report.
 - [ ] Re-test sharing from the home page, native page, and web-view page.
 - [ ] Re-test the native LLM generation path inside WeChat DevTools and on a
@@ -166,6 +169,8 @@ Run this after scanning a preview QR or opening an experience version:
 - The 4x4 Ziwei board fits the phone width and palace selection updates the
   detail card.
 - Settings page saves and clears the backend access key locally.
+- Settings page backend test succeeds, or shows a readable domain/key/network
+  error.
 - LLM generation stays disabled until both the key is saved and the send-consent
   checkbox is selected.
 - Slow LLM requests show progress text, and a successful response fills the

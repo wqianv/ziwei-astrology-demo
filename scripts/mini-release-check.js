@@ -63,6 +63,7 @@ function printReleaseSummary() {
     "Scan a fresh preview QR on a phone and run the Phone QA checklist.",
     "Confirm https://api.tanxj.xyz is accepted as a WeChat request legal domain.",
     "Confirm https://www.tanxj.xyz is accepted as a web-view business domain, if keeping the H5 route in review.",
+    "Run the settings page backend connectivity test with the access key saved locally.",
     "Generate one native LLM report with the backend access key saved locally.",
     "Upload only with npm run mini:upload -- --version <version> --desc <description> --confirm-upload.",
   ].forEach((item) => {
