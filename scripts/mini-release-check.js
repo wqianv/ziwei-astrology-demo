@@ -61,6 +61,7 @@ function printReleaseSummary() {
 
   console.log("\nManual gates still required before review/upload:");
   [
+    "Run npm run mini:domain-check if public domain state may have changed.",
     "Scan a fresh preview QR on a phone and run the Phone QA checklist.",
     "Confirm https://api.tanxj.xyz is accepted as a WeChat request legal domain.",
     "Confirm https://www.tanxj.xyz is accepted as a web-view business domain, if keeping the H5 route in review.",

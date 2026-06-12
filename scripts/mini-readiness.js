@@ -44,10 +44,11 @@ function main() {
     {
       label: "Release checks and DevTools helpers are wired",
       passed: Boolean(packageJson.scripts["mini:preflight"]) &&
+        Boolean(packageJson.scripts["mini:domain-check"]) &&
         Boolean(packageJson.scripts["mini:release-check"]) &&
         Boolean(packageJson.scripts["mini:preview"]) &&
         Boolean(packageJson.scripts["mini:upload"]),
-      evidence: "mini:preflight, mini:release-check, mini:preview, mini:upload",
+      evidence: "mini:domain-check, mini:preflight, mini:release-check, mini:preview, mini:upload",
     },
     {
       label: "Native privacy and consent controls are present",
@@ -65,6 +66,7 @@ function main() {
   ];
 
   const manualGates = [
+    `Run npm run mini:domain-check before review/upload if public domain state may have changed.`,
     `Scan the latest preview QR on a phone and run the Phone QA checklist.`,
     `Confirm ${config.REQUEST_DOMAIN} is accepted as a WeChat request legal domain.`,
     `Confirm ${config.WEBVIEW_DOMAIN} is accepted as a web-view business domain if keeping the H5 route in review.`,

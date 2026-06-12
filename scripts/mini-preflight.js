@@ -345,6 +345,7 @@ function checkPackageScripts(packageJson) {
 
   passIf(Boolean(scripts["mini:vendor"]), "package.json has mini:vendor", "package.json missing mini:vendor");
   passIf(Boolean(scripts["mini:readiness"]), "package.json has mini:readiness", "package.json missing mini:readiness");
+  passIf(Boolean(scripts["mini:domain-check"]), "package.json has mini:domain-check", "package.json missing mini:domain-check");
   passIf(Boolean(scripts["mini:preflight"]), "package.json has mini:preflight", "package.json missing mini:preflight");
   passIf(Boolean(scripts["mini:release-check"]), "package.json has mini:release-check", "package.json missing mini:release-check");
   passIf(Boolean(scripts["mini:preview"]), "package.json has mini:preview", "package.json missing mini:preview");
@@ -395,6 +396,7 @@ function checkDevToolsHelper(packageJson) {
   passIf(
     readme.includes("npm run mini:preview") &&
       readme.includes("npm run mini:upload") &&
+      readme.includes("npm run mini:domain-check") &&
       readme.includes("npm run mini:release-check") &&
       readme.includes("ziwei-mini-devtools") &&
       readme.includes("--confirm-upload"),
