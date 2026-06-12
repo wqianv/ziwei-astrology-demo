@@ -37,8 +37,8 @@ keys into this file.
 ## Submitter Checklist
 
 - Run `npm run mini:release-check -- --require-clean --with-domain-check`.
-- Scan the latest preview QR on a phone and complete the Phone QA checklist in
-  `README.md`.
+- Scan the latest preview QR on a phone and record the result in
+  `PHONE_QA.md`.
 - Confirm `https://api.tanxj.xyz` is configured as a request legal domain.
 - Confirm `https://www.tanxj.xyz` is configured as a web-view business domain
   if the H5 route is included in review.

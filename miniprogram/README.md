@@ -149,6 +149,8 @@ because it creates a new draft in the WeChat Mini Program backend.
 
 Before submitting for review, copy the version description, review comment, and
 reviewer test path from `REVIEW_NOTES.md`.
+After scanning a preview QR or opening an experience version, record the real
+phone QA result in `PHONE_QA.md`.
 
 The native page still keeps the H5 entry because the web chart is more visual
 and useful for cross-checking during the备案 path.
@@ -157,7 +159,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 76 checks.
+- `npm run mini:preflight` passes with 77 checks.
 - `npm run mini:readiness` passes all project-internal gates.
 - `npm run mini:domain-check` confirms the H5 domain returns HTTPS 200 and the
   Worker route returns HTTP 401 without the backend access key.
@@ -165,6 +167,7 @@ As of 2026-06-12 on `main`:
 - `npm run mini:release-check -- --require-clean` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 540 KB.
 - GitHub Actions workflow `Build demo and mini program` passed for `main`.
+- `PHONE_QA.md` is available as the real-device QA record template.
 - `https://www.tanxj.xyz/` resolves through Cloudflare and returns HTTPS 200.
 - `https://api.tanxj.xyz/api/llm/interpret` resolves through Cloudflare and
   returns HTTP 401 without `X-Ziwei-Proxy-Key`, which confirms the Worker route
@@ -186,6 +189,7 @@ The latest local preview QR was written to:
 - [x] Add WeChat DevTools preview/upload helper scripts.
 - [x] Add WeChat review notes for version description, review comments, and
       reviewer test path.
+- [x] Add phone QA record template for preview or experience-version testing.
 - [x] Run `npm run mini:preflight` before preview/upload.
 - [x] Run `npm run mini:release-check` before upload.
 - [x] Run `npm run mini:domain-check` before review/upload when domain state may

@@ -358,6 +358,7 @@ function checkDevToolsHelper(packageJson) {
   const releaseCheck = readText("scripts/mini-release-check.js");
   const readme = readText("miniprogram/README.md");
   const reviewNotes = readText("miniprogram/REVIEW_NOTES.md");
+  const phoneQa = readText("miniprogram/PHONE_QA.md");
 
   passIf(
     fileExists("scripts/mini-devtools.js") &&
@@ -414,6 +415,16 @@ function checkDevToolsHelper(packageJson) {
       reviewNotes.includes("Never commit backend access keys"),
     "Review notes document submission copy, tester path, and secret boundary",
     "REVIEW_NOTES.md should document review copy, tester path, and secret handling",
+  );
+  passIf(
+    fileExists("miniprogram/PHONE_QA.md") &&
+      readme.includes("PHONE_QA.md") &&
+      reviewNotes.includes("PHONE_QA.md") &&
+      phoneQa.includes("Required Checks") &&
+      phoneQa.includes("Do not paste backend access keys") &&
+      phoneQa.includes("Overall result"),
+    "Phone QA template documents real-device checks and secret boundary",
+    "PHONE_QA.md should document real-device QA checks and secret handling",
   );
 }
 
