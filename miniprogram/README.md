@@ -122,8 +122,8 @@ npm run mini:preview
 ```
 
 The QR image and preview metadata are written to `/tmp/ziwei-mini-devtools/`.
-The command runs `mini:preflight` first, then calls the local WeChat DevTools
-CLI with this Mini Program project.
+The command runs `mini:readiness` and `mini:preflight` first, then calls the
+local WeChat DevTools CLI with this Mini Program project.
 
 Upload an experience-version draft only when you are ready to create a new
 Mini Program backend draft:
@@ -132,9 +132,9 @@ Mini Program backend draft:
 npm run mini:upload -- --version 0.1.0 --desc "native iztro chart preview" --confirm-upload
 ```
 
-The upload command also runs `mini:preflight` first and requires both a version
-and description. It also requires `--confirm-upload` because it creates a new
-draft in the WeChat Mini Program backend.
+The upload command also runs `mini:readiness` and `mini:preflight` first and
+requires both a version and description. It also requires `--confirm-upload`
+because it creates a new draft in the WeChat Mini Program backend.
 
 The native page still keeps the H5 entry because the web chart is more visual
 and useful for cross-checking during the备案 path.
@@ -157,7 +157,7 @@ As of 2026-06-12 on `main`:
 The latest local preview QR was written to:
 
 ```text
-/private/tmp/ziwei-mini-latest-preview.png
+/private/tmp/ziwei-mini-gated-preview.png
 ```
 
 ## Release checklist

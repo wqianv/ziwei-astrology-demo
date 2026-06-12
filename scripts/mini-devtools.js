@@ -36,6 +36,7 @@ function main() {
 }
 
 function preview(options) {
+  runReadiness();
   runPreflight();
   ensureArtifactDir();
 
@@ -74,6 +75,7 @@ function upload(options) {
     fail("Upload requires --confirm-upload to create a WeChat backend draft.");
   }
 
+  runReadiness();
   runPreflight();
   ensureArtifactDir();
 
@@ -95,6 +97,13 @@ function upload(options) {
   ]);
 
   console.log(`\nUpload info: ${infoOutput}`);
+}
+
+function runReadiness() {
+  execFileSync("npm", ["run", "mini:readiness"], {
+    cwd: root,
+    stdio: "inherit",
+  });
 }
 
 function runPreflight() {
