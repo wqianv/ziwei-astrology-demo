@@ -7,8 +7,10 @@
 
   <view class="actions">
     <button class="primary" bindtap="openNativeApp">打开原生排盘</button>
-    <button class="secondary" bindtap="openWebApp">网页版完整盘</button>
-    <button class="secondary" open-type="share">分享给朋友</button>
+    <view class="secondary-actions">
+      <button class="secondary" bindtap="openWebApp">网页版完整盘</button>
+      <button class="secondary" open-type="share">分享给朋友</button>
+    </view>
   </view>
 
   <view class="panel">

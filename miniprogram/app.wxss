@@ -6,13 +6,21 @@ page {
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
+view,
+text,
+input,
+textarea,
+picker {
+  box-sizing: border-box;
+}
+
 button {
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0;
   padding: 0 24rpx;
-  border-radius: 10rpx;
+  border-radius: 12rpx;
   font: inherit;
   line-height: 1.2;
   box-sizing: border-box;

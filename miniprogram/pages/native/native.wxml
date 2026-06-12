@@ -230,8 +230,10 @@
     </view>
     <view class="privacy">{{usageText}}</view>
     <view wx:if="{{cachedReportNotice}}" class="privacy">{{cachedReportNotice}}</view>
-    <button class="secondary compact-action" bindtap="copyReport">复制解读</button>
-    <button class="secondary compact-action" bindtap="clearCachedReport">清除本机解读</button>
+    <view class="report-actions">
+      <button class="secondary compact-action" bindtap="copyReport">复制解读</button>
+      <button class="secondary compact-action" bindtap="clearCachedReport">清除本机解读</button>
+    </view>
   </view>
 
   <view class="section-list">
