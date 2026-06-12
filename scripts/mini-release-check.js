@@ -65,6 +65,7 @@ function printReleaseSummary() {
     "Confirm https://www.tanxj.xyz is accepted as a web-view business domain, if keeping the H5 route in review.",
     "Run the settings page backend connectivity test with the access key saved locally.",
     "Copy diagnostics from the settings page if the backend connectivity test fails.",
+    "Confirm birth date, birth time, and gender restore after reopening and can be reset locally.",
     "Generate one native LLM report with the backend access key saved locally.",
     "Confirm the native LLM report restores for the same birth profile and can be cleared locally.",
     "Upload only with npm run mini:upload -- --version <version> --desc <description> --confirm-upload.",

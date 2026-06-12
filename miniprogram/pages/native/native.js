@@ -1,5 +1,6 @@
 const {
   API_URL,
+  BIRTH_PROFILE_STORAGE,
   LLM_CONSENT_STORAGE,
   LLM_REPORT_STORAGE,
   PROXY_KEY_STORAGE,
@@ -14,14 +15,22 @@ const {
 } = require("../../utils/nativeAstrology");
 const { buildPrompt, parseLLMReport, reportSections } = require("../../utils/report");
 
+const DEFAULT_BIRTH_PROFILE = {
+  birthDate: "2003-10-12",
+  birthTimeIndex: 1,
+  genderIndex: 0,
+};
+
 Page({
   data: {
-    birthDate: "2003-10-12",
-    birthTimeIndex: 1,
-    birthTimeText: birthTimes[1],
+    birthDate: DEFAULT_BIRTH_PROFILE.birthDate,
+    birthTimeIndex: DEFAULT_BIRTH_PROFILE.birthTimeIndex,
+    birthTimeText: birthTimes[DEFAULT_BIRTH_PROFILE.birthTimeIndex],
     birthTimes,
-    genderIndex: 0,
-    genderOptions: decorateGenderOptions(0),
+    genderIndex: DEFAULT_BIRTH_PROFILE.genderIndex,
+    genderOptions: decorateGenderOptions(DEFAULT_BIRTH_PROFILE.genderIndex),
+    birthProfileSaved: false,
+    birthProfileNotice: "",
     proxyAccessKey: "",
     proxyKeySaved: false,
     llmConsentAccepted: false,
@@ -47,6 +56,7 @@ Page({
   },
 
   onLoad() {
+    this.restoreBirthProfile();
     this.syncProxyAccessKey();
     this.refreshProfile();
   },
@@ -78,7 +88,10 @@ Page({
   handleBirthDateChange(event) {
     this.setData({
       birthDate: event.detail.value,
+      birthProfileSaved: true,
+      birthProfileNotice: "出生信息已保存到本机微信。",
     });
+    this.saveBirthProfile();
     this.refreshProfile();
   },
 
@@ -86,7 +99,10 @@ Page({
     this.setData({
       birthTimeIndex: Number(event.detail.value),
       birthTimeText: birthTimes[Number(event.detail.value)],
+      birthProfileSaved: true,
+      birthProfileNotice: "出生信息已保存到本机微信。",
     });
+    this.saveBirthProfile();
     this.refreshProfile();
   },
 
@@ -96,8 +112,62 @@ Page({
     this.setData({
       genderIndex,
       genderOptions: decorateGenderOptions(genderIndex),
+      birthProfileSaved: true,
+      birthProfileNotice: "出生信息已保存到本机微信。",
     });
+    this.saveBirthProfile();
     this.refreshProfile();
+  },
+
+  restoreBirthProfile() {
+    const profile = readBirthProfile();
+
+    if (!profile) {
+      return;
+    }
+
+    this.setData({
+      birthDate: profile.birthDate,
+      birthTimeIndex: profile.birthTimeIndex,
+      birthTimeText: birthTimes[profile.birthTimeIndex],
+      genderIndex: profile.genderIndex,
+      genderOptions: decorateGenderOptions(profile.genderIndex),
+      birthProfileSaved: true,
+      birthProfileNotice: "已恢复本机保存的出生信息。",
+    });
+  },
+
+  saveBirthProfile() {
+    writeBirthProfile({
+      birthDate: this.data.birthDate,
+      birthTimeIndex: this.data.birthTimeIndex,
+      genderIndex: this.data.genderIndex,
+    });
+  },
+
+  clearBirthProfile() {
+    wx.showModal({
+      title: "重置出生信息",
+      content: "会清除本机保存的生日、时辰和性别，并恢复为默认示例；不会清除后端访问密钥和已保存解读。",
+      confirmText: "重置",
+      success: (result) => {
+        if (!result.confirm) {
+          return;
+        }
+
+        wx.removeStorageSync(BIRTH_PROFILE_STORAGE);
+        this.setData({
+          birthDate: DEFAULT_BIRTH_PROFILE.birthDate,
+          birthTimeIndex: DEFAULT_BIRTH_PROFILE.birthTimeIndex,
+          birthTimeText: birthTimes[DEFAULT_BIRTH_PROFILE.birthTimeIndex],
+          genderIndex: DEFAULT_BIRTH_PROFILE.genderIndex,
+          genderOptions: decorateGenderOptions(DEFAULT_BIRTH_PROFILE.genderIndex),
+          birthProfileSaved: false,
+          birthProfileNotice: "已清除本机保存的出生信息。",
+        });
+        this.refreshProfile();
+      },
+    });
   },
 
   selectPalace(event) {
@@ -393,6 +463,40 @@ function emptyReportSections() {
     content: "",
     hasContent: false,
   }));
+}
+
+function readBirthProfile() {
+  const value = wx.getStorageSync(BIRTH_PROFILE_STORAGE);
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const birthDate = String(value.birthDate || "");
+  const birthTimeIndex = Number(value.birthTimeIndex);
+  const genderIndex = Number(value.genderIndex);
+
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) ||
+    !birthTimes[birthTimeIndex] ||
+    !baseGenderOptions[genderIndex]
+  ) {
+    return null;
+  }
+
+  return {
+    birthDate,
+    birthTimeIndex,
+    genderIndex,
+  };
+}
+
+function writeBirthProfile({ birthDate, birthTimeIndex, genderIndex }) {
+  wx.setStorageSync(BIRTH_PROFILE_STORAGE, {
+    birthDate,
+    birthTimeIndex,
+    genderIndex,
+  });
 }
 
 function buildReportCacheKey({ birthDate, birthTimeIndex, genderIndex }) {

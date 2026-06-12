@@ -66,7 +66,8 @@ The native page now bundles `iztro` into `miniprogram/vendor/iztro.js`, so it
 can generate lunar dates, four pillars, Ziwei palaces, stars, and decadal ranges
 without opening the H5 app:
 
-1. Birth date, birth time, and gender input.
+1. Birth date, birth time, and gender input, saved in local WeChat storage with
+   a reset action.
 2. Local summary cards from the iztro astrolabe.
 3. Native Ziwei twelve-palace list with main stars, support stars, and decadal
    ranges.
@@ -130,7 +131,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 70 checks.
+- `npm run mini:preflight` passes with 71 checks.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 530 KB.
@@ -139,7 +140,7 @@ As of 2026-06-12 on `main`:
 The latest local preview QR was written to:
 
 ```text
-/private/tmp/ziwei-mini-report-cache-preview.png
+/private/tmp/ziwei-mini-birth-profile-preview.png
 ```
 
 ## Release checklist
@@ -159,6 +160,8 @@ The latest local preview QR was written to:
       requested by the platform.
 - [ ] Save the backend access key from `设置与上线检查`.
 - [ ] Run `测试后端连接` successfully on a phone.
+- [ ] Confirm birth date, birth time, and gender restore after reopening and can
+      be reset locally.
 - [ ] Confirm the native send-consent checkbox before generating an LLM report.
 - [ ] Confirm the latest native LLM report restores after reopening the same
       birth profile and can be cleared locally.
@@ -173,6 +176,8 @@ Run this after scanning a preview QR or opening an experience version:
 - Home page opens and the three action buttons are aligned.
 - Native chart page opens without horizontal scrolling.
 - Birth date, birth time, and gender changes refresh the local summary cards.
+- Birth date, birth time, and gender restore after reopening, and `重置出生信息`
+  clears the local saved profile.
 - The 4x4 Ziwei board fits the phone width and palace selection updates the
   detail card.
 - Settings page saves and clears the backend access key locally.

@@ -41,6 +41,9 @@
         </button>
       </view>
     </view>
+
+    <view wx:if="{{birthProfileNotice}}" class="notice success">{{birthProfileNotice}}</view>
+    <button class="secondary compact-action" bindtap="clearBirthProfile">重置出生信息</button>
   </view>
 
   <view class="summary-grid">

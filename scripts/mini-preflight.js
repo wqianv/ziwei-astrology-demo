@@ -139,6 +139,15 @@ function checkNativeFlow() {
     "Native LLM report is cached locally and can be cleared",
     "Native LLM report should be saved locally and offer a clear action",
   );
+  passIf(
+    nativeJs.includes("BIRTH_PROFILE_STORAGE") &&
+      nativeJs.includes("restoreBirthProfile") &&
+      nativeJs.includes("saveBirthProfile") &&
+      nativeJs.includes("clearBirthProfile") &&
+      nativeWxml.includes("重置出生信息"),
+    "Native birth profile is saved locally and can be reset",
+    "Native birth profile should be saved locally and offer a reset action",
+  );
 }
 
 function checkSettingsFlow() {
