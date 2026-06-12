@@ -147,6 +147,9 @@ The upload command also runs `mini:readiness` and `mini:preflight` first and
 requires both a version and description. It also requires `--confirm-upload`
 because it creates a new draft in the WeChat Mini Program backend.
 
+Before submitting for review, copy the version description, review comment, and
+reviewer test path from `REVIEW_NOTES.md`.
+
 The native page still keeps the H5 entry because the web chart is more visual
 and useful for cross-checking during the备案 path.
 
@@ -154,7 +157,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 75 checks.
+- `npm run mini:preflight` passes with 76 checks.
 - `npm run mini:readiness` passes all project-internal gates.
 - `npm run mini:domain-check` confirms the H5 domain returns HTTPS 200 and the
   Worker route returns HTTP 401 without the backend access key.
@@ -181,6 +184,8 @@ The latest local preview QR was written to:
 - [x] Add a public domain check script for the H5 and Worker domains.
 - [x] Add a combined Mini Program release-check script.
 - [x] Add WeChat DevTools preview/upload helper scripts.
+- [x] Add WeChat review notes for version description, review comments, and
+      reviewer test path.
 - [x] Run `npm run mini:preflight` before preview/upload.
 - [x] Run `npm run mini:release-check` before upload.
 - [x] Run `npm run mini:domain-check` before review/upload when domain state may

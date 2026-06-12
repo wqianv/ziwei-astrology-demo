@@ -357,6 +357,7 @@ function checkDevToolsHelper(packageJson) {
   const helper = readText("scripts/mini-devtools.js");
   const releaseCheck = readText("scripts/mini-release-check.js");
   const readme = readText("miniprogram/README.md");
+  const reviewNotes = readText("miniprogram/REVIEW_NOTES.md");
 
   passIf(
     fileExists("scripts/mini-devtools.js") &&
@@ -404,6 +405,15 @@ function checkDevToolsHelper(packageJson) {
       readme.includes("--confirm-upload"),
     "README documents WeChat DevTools preview/upload flow",
     "README should document preview/upload helper commands",
+  );
+  passIf(
+    fileExists("miniprogram/REVIEW_NOTES.md") &&
+      readme.includes("REVIEW_NOTES.md") &&
+      reviewNotes.includes("Suggested Review Comment") &&
+      reviewNotes.includes("Reviewer Test Path") &&
+      reviewNotes.includes("Never commit backend access keys"),
+    "Review notes document submission copy, tester path, and secret boundary",
+    "REVIEW_NOTES.md should document review copy, tester path, and secret handling",
   );
 }
 
