@@ -92,6 +92,13 @@ Regenerate the vendor bundle after upgrading `iztro`:
 npm run mini:vendor
 ```
 
+Print the current project-internal readiness gates and the remaining manual
+review gates:
+
+```bash
+npm run mini:readiness
+```
+
 Run this before a preview, upload, or review submission:
 
 ```bash
@@ -104,8 +111,9 @@ Run the broader release gate before creating an experience-version draft:
 npm run mini:release-check -- --require-clean
 ```
 
-This runs the Mini Program preflight, builds the retained H5/备案 route, checks
-that the Git worktree is clean, and prints the remaining manual gates.
+This runs the readiness report, Mini Program preflight, builds the retained
+H5/备案 route, checks that the Git worktree is clean, and prints the remaining
+manual gates.
 
 Generate a QR code for phone preview through WeChat DevTools:
 
@@ -135,7 +143,8 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 73 checks.
+- `npm run mini:preflight` passes with 74 checks.
+- `npm run mini:readiness` passes all project-internal gates.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check -- --require-clean` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 540 KB.

@@ -12,6 +12,7 @@ function main() {
   console.log("Mini Program release check\n");
 
   checkWorktree();
+  runStep("Mini Program readiness", "npm", ["run", "mini:readiness"]);
   runStep("Mini Program preflight", "npm", ["run", "mini:preflight"]);
   runStep("H5 build for retained filing route", "npm", ["run", "demo:build"]);
   printReleaseSummary();

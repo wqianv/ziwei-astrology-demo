@@ -344,6 +344,7 @@ function checkPackageScripts(packageJson) {
   const scripts = packageJson.scripts || {};
 
   passIf(Boolean(scripts["mini:vendor"]), "package.json has mini:vendor", "package.json missing mini:vendor");
+  passIf(Boolean(scripts["mini:readiness"]), "package.json has mini:readiness", "package.json missing mini:readiness");
   passIf(Boolean(scripts["mini:preflight"]), "package.json has mini:preflight", "package.json missing mini:preflight");
   passIf(Boolean(scripts["mini:release-check"]), "package.json has mini:release-check", "package.json missing mini:release-check");
   passIf(Boolean(scripts["mini:preview"]), "package.json has mini:preview", "package.json missing mini:preview");
@@ -383,11 +384,12 @@ function checkDevToolsHelper(packageJson) {
   passIf(
     fileExists("scripts/mini-release-check.js") &&
       scripts["mini:release-check"] === "node scripts/mini-release-check.js" &&
+      releaseCheck.includes("mini:readiness") &&
       releaseCheck.includes("mini:preflight") &&
       releaseCheck.includes("demo:build") &&
       releaseCheck.includes("--require-clean"),
-    "Release check verifies mini preflight, H5 build, and clean-worktree mode",
-    "Release check should run preflight/build and support --require-clean",
+    "Release check verifies readiness, mini preflight, H5 build, and clean-worktree mode",
+    "Release check should run readiness/preflight/build and support --require-clean",
   );
   passIf(
     readme.includes("npm run mini:preview") &&
