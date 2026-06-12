@@ -149,11 +149,15 @@ As of 2026-06-12 on `main`:
 - `npm run mini:release-check -- --require-clean` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 540 KB.
 - GitHub Actions workflow `Build demo and mini program` passed for `main`.
+- `https://www.tanxj.xyz/` resolves through Cloudflare and returns HTTPS 200.
+- `https://api.tanxj.xyz/api/llm/interpret` resolves through Cloudflare and
+  returns HTTP 401 without `X-Ziwei-Proxy-Key`, which confirms the Worker route
+  is reachable and key-protected.
 
 The latest local preview QR was written to:
 
 ```text
-/private/tmp/ziwei-mini-style-preview.png
+/private/tmp/ziwei-mini-latest-preview.png
 ```
 
 ## Release checklist
