@@ -388,10 +388,12 @@ function checkDevToolsHelper(packageJson) {
       scripts["mini:release-check"] === "node scripts/mini-release-check.js" &&
       releaseCheck.includes("mini:readiness") &&
       releaseCheck.includes("mini:preflight") &&
+      releaseCheck.includes("mini:domain-check") &&
       releaseCheck.includes("demo:build") &&
-      releaseCheck.includes("--require-clean"),
-    "Release check verifies readiness, mini preflight, H5 build, and clean-worktree mode",
-    "Release check should run readiness/preflight/build and support --require-clean",
+      releaseCheck.includes("--require-clean") &&
+      releaseCheck.includes("--with-domain-check"),
+    "Release check verifies readiness, mini preflight, optional domain check, H5 build, and clean-worktree mode",
+    "Release check should run readiness/preflight/build and support --require-clean plus --with-domain-check",
   );
   passIf(
     readme.includes("npm run mini:preview") &&

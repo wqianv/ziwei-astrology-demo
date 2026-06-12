@@ -119,7 +119,12 @@ npm run mini:release-check -- --require-clean
 
 This runs the readiness report, Mini Program preflight, builds the retained
 H5/备案 route, checks that the Git worktree is clean, and prints the remaining
-manual gates.
+manual gates. Add `--with-domain-check` when you also want to verify the public
+H5 and Worker domains in the same release gate:
+
+```bash
+npm run mini:release-check -- --require-clean --with-domain-check
+```
 
 Generate a QR code for phone preview through WeChat DevTools:
 

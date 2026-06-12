@@ -7,6 +7,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const miniprogramRoot = path.join(root, "miniprogram");
 const requireClean = process.argv.includes("--require-clean");
+const withDomainCheck = process.argv.includes("--with-domain-check");
 
 function main() {
   console.log("Mini Program release check\n");
@@ -14,6 +15,9 @@ function main() {
   checkWorktree();
   runStep("Mini Program readiness", "npm", ["run", "mini:readiness"]);
   runStep("Mini Program preflight", "npm", ["run", "mini:preflight"]);
+  if (withDomainCheck) {
+    runStep("Public domain check", "npm", ["run", "mini:domain-check"]);
+  }
   runStep("H5 build for retained filing route", "npm", ["run", "demo:build"]);
   printReleaseSummary();
 }
@@ -60,8 +64,7 @@ function printReleaseSummary() {
   console.log(`Mini Program source package: ${formatBytes(packageSize)}`);
 
   console.log("\nManual gates still required before review/upload:");
-  [
-    "Run npm run mini:domain-check if public domain state may have changed.",
+  const manualGates = [
     "Scan a fresh preview QR on a phone and run the Phone QA checklist.",
     "Confirm https://api.tanxj.xyz is accepted as a WeChat request legal domain.",
     "Confirm https://www.tanxj.xyz is accepted as a web-view business domain, if keeping the H5 route in review.",
@@ -73,7 +76,13 @@ function printReleaseSummary() {
     "Confirm the native LLM report restores for the same birth profile and can be cleared locally.",
     "Confirm the native LLM report copy action excludes the backend access key.",
     "Upload only with npm run mini:upload -- --version <version> --desc <description> --confirm-upload.",
-  ].forEach((item) => {
+  ];
+
+  if (!withDomainCheck) {
+    manualGates.unshift("Run npm run mini:release-check -- --require-clean --with-domain-check if public domain state may have changed.");
+  }
+
+  manualGates.forEach((item) => {
     console.log(`- ${item}`);
   });
 }
