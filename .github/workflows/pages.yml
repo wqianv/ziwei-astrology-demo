@@ -34,6 +34,9 @@ jobs:
       - name: Configure base path
         run: echo "VITE_BASE_PATH=/" >> "$GITHUB_ENV"
 
+      - name: Mini Program readiness
+        run: npm run mini:readiness
+
       - name: Mini Program preflight
         run: npm run mini:preflight
 
