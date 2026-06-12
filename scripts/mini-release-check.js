@@ -66,6 +66,7 @@ function printReleaseSummary() {
     "Run the settings page backend connectivity test with the access key saved locally.",
     "Copy diagnostics from the settings page if the backend connectivity test fails.",
     "Generate one native LLM report with the backend access key saved locally.",
+    "Confirm the native LLM report restores for the same birth profile and can be cleared locally.",
     "Upload only with npm run mini:upload -- --version <version> --desc <description> --confirm-upload.",
   ].forEach((item) => {
     console.log(`- ${item}`);

@@ -130,6 +130,15 @@ function checkNativeFlow() {
     "LLM prompt may include UI-only board data",
     "warn",
   );
+  passIf(
+    nativeJs.includes("LLM_REPORT_STORAGE") &&
+      nativeJs.includes("saveReportCache") &&
+      nativeJs.includes("readReportCache") &&
+      nativeJs.includes("clearCachedReport") &&
+      nativeWxml.includes("清除本机解读"),
+    "Native LLM report is cached locally and can be cleared",
+    "Native LLM report should be saved locally and offer a clear action",
+  );
 }
 
 function checkSettingsFlow() {

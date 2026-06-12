@@ -1,6 +1,7 @@
 const {
   API_URL,
   LLM_CONSENT_STORAGE,
+  LLM_REPORT_STORAGE,
   PROXY_KEY_STORAGE,
   SHARE_TITLE,
   SITE_URL,
@@ -37,16 +38,12 @@ Page({
     ziweiKeyPalaces: [],
     ziweiBoardCells: [],
     selectedPalace: {},
-    sections: reportSections.map((section) => ({
-      id: section.id,
-      title: section.title,
-      content: "",
-      hasContent: false,
-    })),
+    sections: emptyReportSections(),
     reportMeta: "",
     usageText: "",
     matchedCount: 0,
     hasReport: false,
+    cachedReportNotice: "",
   },
 
   onLoad() {
@@ -171,6 +168,7 @@ Page({
     }
 
     const prompt = buildPrompt(this.data.profile);
+    const reportCacheKey = buildReportCacheKey(this.data);
 
     this.startTimer();
     this.setData({
@@ -185,6 +183,8 @@ Page({
       reportMeta: "",
       usageText: "",
       matchedCount: 0,
+      cachedReportNotice: "",
+      sections: emptyReportSections(),
     });
 
     wx.request({
@@ -209,19 +209,38 @@ Page({
         const data = response.data || {};
         const parsed = parseLLMReport(data.content || "");
         const usage = data.usage || {};
+        const reportMeta = `${data.model || "llm"} · 后端代理`;
         const usageText = usage.total_tokens
           ? `tokens: ${usage.prompt_tokens || "-"} prompt / ${
               usage.completion_tokens || "-"
             } completion / ${usage.total_tokens} total`
           : "";
+        const reportCache = {
+          key: reportCacheKey,
+          savedAt: new Date().toISOString(),
+          sections: parsed.sections,
+          reportMeta,
+          usageText,
+          matchedCount: parsed.matchedCount,
+        };
 
         wx.setStorageSync(PROXY_KEY_STORAGE, accessKey);
+        saveReportCache(reportCache);
+        if (buildReportCacheKey(this.data) !== reportCacheKey) {
+          this.setData({
+            proxyKeySaved: true,
+            saveNotice: "出生信息已变化；本次解读已保存到原出生信息的本机缓存。",
+          });
+          return;
+        }
+
         this.setData({
           sections: parsed.sections,
-          reportMeta: `${data.model || "llm"} · 后端代理`,
+          reportMeta,
           usageText,
           matchedCount: parsed.matchedCount,
           hasReport: true,
+          cachedReportNotice: "已保存到本机微信；下次打开相同出生信息会自动恢复。",
           proxyKeySaved: true,
           canGenerate: canGenerateReport({
             accessKey,
@@ -265,6 +284,28 @@ Page({
     const selectedPalace =
       findPalaceByName(profile.ziwei.palaces, previousPalaceName) ||
       profile.ziwei.mingPalace;
+    const cachedReport = readReportCache(buildReportCacheKey({
+      birthDate: this.data.birthDate,
+      birthTimeIndex: this.data.birthTimeIndex,
+      genderIndex: this.data.genderIndex,
+    }));
+    const reportState = cachedReport
+      ? {
+          hasReport: true,
+          sections: cachedReport.sections,
+          reportMeta: cachedReport.reportMeta,
+          usageText: cachedReport.usageText,
+          matchedCount: cachedReport.matchedCount,
+          cachedReportNotice: `已恢复本机保存的上次解读：${formatSavedAt(cachedReport.savedAt)}`,
+        }
+      : {
+          hasReport: false,
+          reportMeta: "",
+          usageText: "",
+          matchedCount: 0,
+          cachedReportNotice: "",
+          sections: emptyReportSections(),
+        };
 
     this.setData({
       profile,
@@ -276,14 +317,31 @@ Page({
         selectedPalace.name,
       ),
       selectedPalace,
-      hasReport: false,
       error: "",
-      sections: reportSections.map((section) => ({
-        id: section.id,
-        title: section.title,
-        content: "",
-        hasContent: false,
-      })),
+      ...reportState,
+    });
+  },
+
+  clearCachedReport() {
+    wx.showModal({
+      title: "清除本机解读",
+      content: "只会清除当前小程序本机保存的最近一次解读结果，不会清除后端访问密钥。",
+      confirmText: "清除",
+      success: (result) => {
+        if (!result.confirm) {
+          return;
+        }
+
+        wx.removeStorageSync(LLM_REPORT_STORAGE);
+        this.setData({
+          hasReport: false,
+          reportMeta: "",
+          usageText: "",
+          matchedCount: 0,
+          cachedReportNotice: "",
+          sections: emptyReportSections(),
+        });
+      },
     });
   },
 
@@ -326,6 +384,50 @@ function decorateGenderOptions(activeIndex) {
     ...item,
     active: index === activeIndex,
   }));
+}
+
+function emptyReportSections() {
+  return reportSections.map((section) => ({
+    id: section.id,
+    title: section.title,
+    content: "",
+    hasContent: false,
+  }));
+}
+
+function buildReportCacheKey({ birthDate, birthTimeIndex, genderIndex }) {
+  const option = baseGenderOptions[Number(genderIndex)] || baseGenderOptions[0];
+
+  return `${birthDate}|${birthTimeIndex}|${option.value}`;
+}
+
+function saveReportCache(cache) {
+  wx.setStorageSync(LLM_REPORT_STORAGE, {
+    key: cache.key,
+    savedAt: cache.savedAt,
+    sections: cache.sections,
+    reportMeta: cache.reportMeta,
+    usageText: cache.usageText,
+    matchedCount: cache.matchedCount,
+  });
+}
+
+function readReportCache(key) {
+  const cached = wx.getStorageSync(LLM_REPORT_STORAGE);
+
+  if (!cached || cached.key !== key || !Array.isArray(cached.sections)) {
+    return null;
+  }
+
+  return cached;
+}
+
+function formatSavedAt(value) {
+  if (!value) {
+    return "本机缓存";
+  }
+
+  return String(value).replace("T", " ").slice(0, 16);
 }
 
 function decorateBoardCells(cells, selectedName) {

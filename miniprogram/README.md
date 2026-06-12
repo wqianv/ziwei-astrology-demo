@@ -77,6 +77,9 @@ without opening the H5 app:
 6. `wx.request` to `https://api.tanxj.xyz/api/llm/interpret`.
 7. Progress and error states for slow or blocked LLM requests.
 8. Sectioned LLM report display.
+9. Latest LLM report cached in local WeChat storage for the same birth profile,
+   with a clear action on the native page. The cache does not store the backend
+   access key.
 
 Regenerate the vendor bundle after upgrading `iztro`:
 
@@ -127,7 +130,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 69 checks.
+- `npm run mini:preflight` passes with 70 checks.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 530 KB.
@@ -136,7 +139,7 @@ As of 2026-06-12 on `main`:
 The latest local preview QR was written to:
 
 ```text
-/private/tmp/ziwei-mini-style-preview.png
+/private/tmp/ziwei-mini-report-cache-preview.png
 ```
 
 ## Release checklist
@@ -157,6 +160,8 @@ The latest local preview QR was written to:
 - [ ] Save the backend access key from `设置与上线检查`.
 - [ ] Run `测试后端连接` successfully on a phone.
 - [ ] Confirm the native send-consent checkbox before generating an LLM report.
+- [ ] Confirm the latest native LLM report restores after reopening the same
+      birth profile and can be cleared locally.
 - [ ] Re-test sharing from the home page, native page, and web-view page.
 - [ ] Re-test the native LLM generation path inside WeChat DevTools and on a
       phone.
@@ -179,5 +184,7 @@ Run this after scanning a preview QR or opening an experience version:
   checkbox is selected.
 - Slow LLM requests show progress text, and a successful response fills the
   sectioned report cards.
+- Reopening the same birth profile restores the latest local LLM report, and
+  `清除本机解读` removes it.
 - Web-view entry opens `https://www.tanxj.xyz` after the business domain is
   accepted by WeChat.
