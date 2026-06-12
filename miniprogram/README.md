@@ -86,6 +86,15 @@ Run this before a preview, upload, or review submission:
 npm run mini:preflight
 ```
 
+Run the broader release gate before creating an experience-version draft:
+
+```bash
+npm run mini:release-check -- --require-clean
+```
+
+This runs the Mini Program preflight, builds the retained H5/备案 route, checks
+that the Git worktree is clean, and prints the remaining manual gates.
+
 Generate a QR code for phone preview through WeChat DevTools:
 
 ```bash
@@ -114,8 +123,9 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 64 checks.
+- `npm run mini:preflight` passes with 66 checks.
 - `npm run demo:build` passes for the retained H5/备案 route.
+- `npm run mini:release-check` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 530 KB.
 - GitHub Actions workflow `Build demo and mini program` passed for `main`.
 
@@ -130,8 +140,10 @@ The latest local preview QR was written to:
 - [x] Replace `touristappid` with the real AppID.
 - [x] Configure `https://api.tanxj.xyz` as request legal domain.
 - [x] Add a local Mini Program preflight script.
+- [x] Add a combined Mini Program release-check script.
 - [x] Add WeChat DevTools preview/upload helper scripts.
 - [x] Run `npm run mini:preflight` before preview/upload.
+- [x] Run `npm run mini:release-check` before upload.
 - [x] Run `npm run mini:preview` and generate a preview QR code.
 - [ ] Scan the preview QR code on a phone.
 - [ ] Upload an experience-version draft with `npm run mini:upload -- --version <version> --desc <description> --confirm-upload`.

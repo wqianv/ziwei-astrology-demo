@@ -278,6 +278,7 @@ function checkPackageScripts(packageJson) {
 
   passIf(Boolean(scripts["mini:vendor"]), "package.json has mini:vendor", "package.json missing mini:vendor");
   passIf(Boolean(scripts["mini:preflight"]), "package.json has mini:preflight", "package.json missing mini:preflight");
+  passIf(Boolean(scripts["mini:release-check"]), "package.json has mini:release-check", "package.json missing mini:release-check");
   passIf(Boolean(scripts["mini:preview"]), "package.json has mini:preview", "package.json missing mini:preview");
   passIf(Boolean(scripts["mini:upload"]), "package.json has mini:upload", "package.json missing mini:upload");
 }
@@ -285,6 +286,7 @@ function checkPackageScripts(packageJson) {
 function checkDevToolsHelper(packageJson) {
   const scripts = packageJson.scripts || {};
   const helper = readText("scripts/mini-devtools.js");
+  const releaseCheck = readText("scripts/mini-release-check.js");
   const readme = readText("miniprogram/README.md");
 
   passIf(
@@ -312,8 +314,18 @@ function checkDevToolsHelper(packageJson) {
     "Upload helper should require --confirm-upload before creating a backend draft",
   );
   passIf(
+    fileExists("scripts/mini-release-check.js") &&
+      scripts["mini:release-check"] === "node scripts/mini-release-check.js" &&
+      releaseCheck.includes("mini:preflight") &&
+      releaseCheck.includes("demo:build") &&
+      releaseCheck.includes("--require-clean"),
+    "Release check verifies mini preflight, H5 build, and clean-worktree mode",
+    "Release check should run preflight/build and support --require-clean",
+  );
+  passIf(
     readme.includes("npm run mini:preview") &&
       readme.includes("npm run mini:upload") &&
+      readme.includes("npm run mini:release-check") &&
       readme.includes("ziwei-mini-devtools") &&
       readme.includes("--confirm-upload"),
     "README documents WeChat DevTools preview/upload flow",

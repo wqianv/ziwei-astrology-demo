@@ -16,6 +16,7 @@
     "build": "npm run clean && tsc && npm run copy-files",
     "mini:vendor": "esbuild node_modules/iztro/lib/index.js --bundle --platform=browser --format=cjs --target=es2018 --minify --legal-comments=none --outfile=miniprogram/vendor/iztro.js",
     "mini:preflight": "node scripts/mini-preflight.js",
+    "mini:release-check": "node scripts/mini-release-check.js",
     "mini:preview": "node scripts/mini-devtools.js preview",
     "mini:upload": "node scripts/mini-devtools.js upload",
     "build:sb": "storybook build",
