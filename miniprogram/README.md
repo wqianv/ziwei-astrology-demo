@@ -110,14 +110,30 @@ draft in the WeChat Mini Program backend.
 The native page still keeps the H5 entry because the web chart is more visual
 and useful for cross-checking during the备案 path.
 
+## Current verification snapshot
+
+As of 2026-06-12 on `main`:
+
+- `npm run mini:preflight` passes with 64 checks.
+- `npm run demo:build` passes for the retained H5/备案 route.
+- `npm run mini:preview` generated a WeChat preview package of about 530 KB.
+- GitHub Actions workflow `Build demo and mini program` passed for `main`.
+
+The latest local preview QR was written to:
+
+```text
+/private/tmp/ziwei-mini-style-preview.png
+```
+
 ## Release checklist
 
 - [x] Replace `touristappid` with the real AppID.
 - [x] Configure `https://api.tanxj.xyz` as request legal domain.
 - [x] Add a local Mini Program preflight script.
 - [x] Add WeChat DevTools preview/upload helper scripts.
-- [ ] Run `npm run mini:preflight` before preview/upload.
-- [ ] Run `npm run mini:preview` and scan the QR code on a phone.
+- [x] Run `npm run mini:preflight` before preview/upload.
+- [x] Run `npm run mini:preview` and generate a preview QR code.
+- [ ] Scan the preview QR code on a phone.
 - [ ] Upload an experience-version draft with `npm run mini:upload -- --version <version> --desc <description> --confirm-upload`.
 - [ ] Configure `https://www.tanxj.xyz` as web-view business domain.
 - [ ] Add any WeChat domain verification file to the production H5 root if
@@ -127,3 +143,20 @@ and useful for cross-checking during the备案 path.
 - [ ] Re-test sharing from the home page, native page, and web-view page.
 - [ ] Re-test the native LLM generation path inside WeChat DevTools and on a
       phone.
+
+## Phone QA checklist
+
+Run this after scanning a preview QR or opening an experience version:
+
+- Home page opens and the three action buttons are aligned.
+- Native chart page opens without horizontal scrolling.
+- Birth date, birth time, and gender changes refresh the local summary cards.
+- The 4x4 Ziwei board fits the phone width and palace selection updates the
+  detail card.
+- Settings page saves and clears the backend access key locally.
+- LLM generation stays disabled until both the key is saved and the send-consent
+  checkbox is selected.
+- Slow LLM requests show progress text, and a successful response fills the
+  sectioned report cards.
+- Web-view entry opens `https://www.tanxj.xyz` after the business domain is
+  accepted by WeChat.
