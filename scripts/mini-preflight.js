@@ -140,6 +140,14 @@ function checkNativeFlow() {
     "Native LLM report should be saved locally and offer a clear action",
   );
   passIf(
+    nativeJs.includes("copyReport") &&
+      nativeJs.includes("buildReportCopyText") &&
+      nativeWxml.includes("复制解读") &&
+      nativeJs.includes("内容仅作传统文化与娱乐参考"),
+    "Native LLM report can be copied with a usage-boundary note",
+    "Native LLM report should be copyable without exposing backend secrets",
+  );
+  passIf(
     nativeJs.includes("BIRTH_PROFILE_STORAGE") &&
       nativeJs.includes("restoreBirthProfile") &&
       nativeJs.includes("saveBirthProfile") &&

@@ -415,6 +415,26 @@ Page({
     });
   },
 
+  copyReport() {
+    if (!this.data.hasReport) {
+      wx.showToast({
+        title: "暂无解读",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.setClipboardData({
+      data: buildReportCopyText(this.data),
+      success: () => {
+        wx.showToast({
+          title: "已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
   startTimer() {
     this.stopTimer();
     this.timer = setInterval(() => {
@@ -532,6 +552,28 @@ function formatSavedAt(value) {
   }
 
   return String(value).replace("T", " ").slice(0, 16);
+}
+
+function buildReportCopyText(data) {
+  const genderOption = baseGenderOptions[Number(data.genderIndex)] || baseGenderOptions[0];
+  const sectionText = (data.sections || [])
+    .filter((section) => section.hasContent)
+    .map((section) => [`## ${section.title}`, section.content].join("\n"))
+    .join("\n\n");
+
+  return [
+    "命理排盘工作台 - LLM 解读",
+    `出生日期：${data.birthDate}`,
+    `出生时辰：${data.birthTimeText}`,
+    `性别：${genderOption.label}`,
+    `报告：${data.reportMeta || "-"}`,
+    data.usageText ? `用量：${data.usageText}` : "",
+    data.cachedReportNotice ? `本机状态：${data.cachedReportNotice}` : "",
+    "",
+    sectionText || "暂无分项内容。",
+    "",
+    "说明：内容仅作传统文化与娱乐参考，不构成确定性判断。",
+  ].filter((line) => line !== "").join("\n");
 }
 
 function decorateBoardCells(cells, selectedName) {

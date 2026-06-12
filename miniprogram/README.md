@@ -81,6 +81,8 @@ without opening the H5 app:
 9. Latest LLM report cached in local WeChat storage for the same birth profile,
    with a clear action on the native page. The cache does not store the backend
    access key.
+10. Copy action for the latest native LLM report, including a usage-boundary
+    note and no backend access key.
 
 Regenerate the vendor bundle after upgrading `iztro`:
 
@@ -131,7 +133,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 71 checks.
+- `npm run mini:preflight` passes with 72 checks.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 530 KB.
@@ -165,6 +167,8 @@ The latest local preview QR was written to:
 - [ ] Confirm the native send-consent checkbox before generating an LLM report.
 - [ ] Confirm the latest native LLM report restores after reopening the same
       birth profile and can be cleared locally.
+- [ ] Confirm the native LLM report can be copied and does not include the
+      backend access key.
 - [ ] Re-test sharing from the home page, native page, and web-view page.
 - [ ] Re-test the native LLM generation path inside WeChat DevTools and on a
       phone.
@@ -191,5 +195,7 @@ Run this after scanning a preview QR or opening an experience version:
   sectioned report cards.
 - Reopening the same birth profile restores the latest local LLM report, and
   `清除本机解读` removes it.
+- `复制解读` copies the sectioned report with a usage-boundary note and no
+  backend access key.
 - Web-view entry opens `https://www.tanxj.xyz` after the business domain is
   accepted by WeChat.

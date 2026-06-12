@@ -68,6 +68,7 @@ function printReleaseSummary() {
     "Confirm birth date, birth time, and gender restore after reopening and can be reset locally.",
     "Generate one native LLM report with the backend access key saved locally.",
     "Confirm the native LLM report restores for the same birth profile and can be cleared locally.",
+    "Confirm the native LLM report copy action excludes the backend access key.",
     "Upload only with npm run mini:upload -- --version <version> --desc <description> --confirm-upload.",
   ].forEach((item) => {
     console.log(`- ${item}`);
