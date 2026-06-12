@@ -169,11 +169,6 @@
   box-sizing: border-box;
 }
 
-.summary-card-wide {
-  width: 100%;
-  min-height: 112rpx;
-}
-
 .summary-card-half {
   flex: 1 1 0;
   width: 0;

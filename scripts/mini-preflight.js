@@ -125,11 +125,13 @@ function checkNativeFlow() {
   );
   passIf(
     nativeJs.includes("buildSummaryRows") &&
-      nativeJs.includes("left: rest[index]") &&
-      nativeJs.includes("right: rest[index + 1]") &&
+      nativeJs.includes("left: summaryCards[index]") &&
+      nativeJs.includes("right: summaryCards[index + 1]") &&
+      !nativeJs.includes("primaryLocalCard") &&
       nativeWxml.includes("summary-row") &&
       nativeWxml.includes("item.left") &&
-      nativeWxml.includes("item.right"),
+      nativeWxml.includes("item.right") &&
+      !nativeWxml.includes("summary-card-wide"),
     "Native summary cards use explicit two-column rows",
     "Native summary cards should render with explicit rows instead of relying on flex wrapping",
   );

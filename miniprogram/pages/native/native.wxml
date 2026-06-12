@@ -47,10 +47,6 @@
   </view>
 
   <view class="summary-grid">
-    <view wx:if="{{primaryLocalCard}}" class="summary-card summary-card-wide">
-      <view class="summary-title">{{primaryLocalCard.title}}</view>
-      <view class="summary-value">{{primaryLocalCard.value}}</view>
-    </view>
     <view class="summary-row" wx:for="{{summaryRows}}" wx:key="key">
       <view class="summary-card summary-card-half">
         <view class="summary-title">{{item.left.title}}</view>
