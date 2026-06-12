@@ -32,7 +32,9 @@ flow for the core chart and LLM report experience.
    Worker, and model link.
 8. If the backend test fails on a phone, tap `复制诊断信息`. The copied text does
    not include the backend access key.
-9. Tap `打开原生排盘`, confirm the send-consent checkbox, and generate one
+9. Use `清除本机数据` on the settings page when you need to reset local key,
+   birth profile, consent, and latest report cache.
+10. Tap `打开原生排盘`, confirm the send-consent checkbox, and generate one
    native LLM report.
 
 ## Required WeChat platform settings
@@ -133,7 +135,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 72 checks.
+- `npm run mini:preflight` passes with 73 checks.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 530 KB.
@@ -162,6 +164,8 @@ The latest local preview QR was written to:
       requested by the platform.
 - [ ] Save the backend access key from `设置与上线检查`.
 - [ ] Run `测试后端连接` successfully on a phone.
+- [ ] Confirm `清除本机数据` removes local key, birth profile, send consent, and
+      latest report cache.
 - [ ] Confirm birth date, birth time, and gender restore after reopening and can
       be reset locally.
 - [ ] Confirm the native send-consent checkbox before generating an LLM report.
@@ -189,6 +193,8 @@ Run this after scanning a preview QR or opening an experience version:
   error.
 - Settings page can copy diagnostic text without including the backend access
   key.
+- Settings page `清除本机数据` resets local key, birth profile, send consent, and
+  latest report cache.
 - LLM generation stays disabled until both the key is saved and the send-consent
   checkbox is selected.
 - Slow LLM requests show progress text, and a successful response fills the

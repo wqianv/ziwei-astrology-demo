@@ -185,6 +185,15 @@ function checkSettingsFlow() {
     "Settings page can copy a secret-free diagnostic report",
     "Settings page should copy diagnostics without exposing backend secrets",
   );
+  passIf(
+    settingsJs.includes("clearLocalData") &&
+      settingsJs.includes("BIRTH_PROFILE_STORAGE") &&
+      settingsJs.includes("LLM_CONSENT_STORAGE") &&
+      settingsJs.includes("LLM_REPORT_STORAGE") &&
+      settingsWxml.includes("清除本机数据"),
+    "Settings page can clear locally stored Mini Program data",
+    "Settings page should clear local key, birth profile, consent, and report cache",
+  );
 }
 
 function checkNativeRuntimeSmoke() {
@@ -305,7 +314,9 @@ function checkComplianceCopy() {
   passIf(
     compliance.includes("不构成确定性判断") &&
       compliance.includes("重大决策") &&
-      compliance.includes("发送确认"),
+      compliance.includes("发送确认") &&
+      compliance.includes("清除本机数据") &&
+      compliance.includes("最近一次解读缓存"),
     "Compliance page covers boundary, major decisions, privacy, and send consent",
     "Compliance page should mention boundary, major decisions, privacy, and send consent",
   );

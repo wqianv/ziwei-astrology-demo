@@ -1,5 +1,8 @@
 const {
   API_URL,
+  BIRTH_PROFILE_STORAGE,
+  LLM_CONSENT_STORAGE,
+  LLM_REPORT_STORAGE,
   PROXY_KEY_STORAGE,
   REQUEST_DOMAIN,
   SHARE_PATH,
@@ -80,6 +83,37 @@ Page({
           notice: "已清除本机保存的后端访问密钥。",
           noticeType: "success",
           backendTestResult: "",
+        });
+      },
+    });
+  },
+
+  clearLocalData() {
+    wx.showModal({
+      title: "清除本机数据",
+      content: "将清除本机保存的后端访问密钥、出生信息、发送确认和最近一次解读缓存。不会影响 Cloudflare、微信后台或服务器数据。",
+      confirmText: "清除",
+      success: (result) => {
+        if (!result.confirm) {
+          return;
+        }
+
+        [
+          PROXY_KEY_STORAGE,
+          BIRTH_PROFILE_STORAGE,
+          LLM_CONSENT_STORAGE,
+          LLM_REPORT_STORAGE,
+        ].forEach((key) => {
+          wx.removeStorageSync(key);
+        });
+
+        this.setData({
+          proxyAccessKey: "",
+          proxyKeySaved: false,
+          notice: "已清除本机保存的数据。",
+          noticeType: "success",
+          backendTestResult: "",
+          backendTestType: "success",
         });
       },
     });
