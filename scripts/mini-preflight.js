@@ -124,6 +124,16 @@ function checkNativeFlow() {
     "Native Ziwei board or selected palace details are missing",
   );
   passIf(
+    nativeJs.includes("buildSummaryRows") &&
+      nativeJs.includes("left: rest[index]") &&
+      nativeJs.includes("right: rest[index + 1]") &&
+      nativeWxml.includes("summary-row") &&
+      nativeWxml.includes("item.left") &&
+      nativeWxml.includes("item.right"),
+    "Native summary cards use explicit two-column rows",
+    "Native summary cards should render with explicit rows instead of relying on flex wrapping",
+  );
+  passIf(
     reportJs.includes("compactProfileForPrompt") &&
       !buildPromptContainsBoardCells(reportJs),
     "LLM prompt compacts UI-only board data",

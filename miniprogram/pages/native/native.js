@@ -43,6 +43,8 @@ Page({
     saveNotice: "",
     profile: {},
     localCards: [],
+    primaryLocalCard: null,
+    summaryRows: [],
     ziweiPalaces: [],
     ziweiKeyPalaces: [],
     ziweiBoardCells: [],
@@ -377,9 +379,13 @@ Page({
           sections: emptyReportSections(),
         };
 
+    const localCards = buildLocalCards(profile);
+
     this.setData({
       profile,
-      localCards: buildLocalCards(profile),
+      localCards,
+      primaryLocalCard: localCards[0] || null,
+      summaryRows: buildSummaryRows(localCards),
       ziweiPalaces: profile.ziwei.palaces,
       ziweiKeyPalaces: profile.ziwei.keyPalaces,
       ziweiBoardCells: decorateBoardCells(
@@ -483,6 +489,21 @@ function emptyReportSections() {
     content: "",
     hasContent: false,
   }));
+}
+
+function buildSummaryRows(cards) {
+  const rows = [];
+  const rest = (cards || []).slice(1);
+
+  for (let index = 0; index < rest.length; index += 2) {
+    rows.push({
+      key: `summary-row-${index}`,
+      left: rest[index],
+      right: rest[index + 1] || null,
+    });
+  }
+
+  return rows;
 }
 
 function readBirthProfile() {

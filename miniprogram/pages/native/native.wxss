@@ -148,26 +148,46 @@
 }
 
 .summary-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14rpx;
   margin-top: 16rpx;
+}
+
+.summary-row {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  margin-top: 14rpx;
+  box-sizing: border-box;
 }
 
 .summary-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  width: calc(50% - 7rpx);
   min-height: 126rpx;
   margin-top: 0;
   padding: 18rpx 16rpx;
   box-sizing: border-box;
 }
 
-.summary-card:first-child {
+.summary-card-wide {
   width: 100%;
   min-height: 112rpx;
+}
+
+.summary-card-half {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+}
+
+.summary-card-right {
+  margin-left: 14rpx;
+}
+
+.summary-card-placeholder {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
 }
 
 .summary-title {
@@ -470,6 +490,14 @@
   line-height: 1.35;
 }
 
+.subsection-note {
+  margin-top: 6rpx;
+  padding: 0 6rpx;
+  color: #71837c;
+  font-size: 22rpx;
+  line-height: 1.45;
+}
+
 .palace-grid {
   display: flex;
   flex-wrap: wrap;
@@ -489,8 +517,8 @@
 }
 
 .palace-card.is-ming {
-  border-color: rgba(214, 173, 80, 0.72);
-  background: rgba(214, 173, 80, 0.12);
+  border-color: rgba(214, 173, 80, 0.5);
+  background: #fffdf7;
 }
 
 .palace-card.is-body {
@@ -569,9 +597,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 36rpx;
+  min-width: 48rpx;
   height: 36rpx;
   border-radius: 999rpx;
+  padding: 0 10rpx;
   background: #d6ad50;
   color: #1f2a25;
   font-size: 21rpx;

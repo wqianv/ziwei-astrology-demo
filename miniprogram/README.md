@@ -177,7 +177,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 79 checks.
+- `npm run mini:preflight` passes with 80 checks.
 - `npm run mini:readiness` passes all project-internal gates.
 - `npm run mini:domain-check` confirms the H5 domain returns HTTPS 200 and the
   Worker route returns HTTP 401 without the backend access key.
