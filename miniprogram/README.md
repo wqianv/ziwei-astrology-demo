@@ -137,14 +137,14 @@ As of 2026-06-12 on `main`:
 
 - `npm run mini:preflight` passes with 73 checks.
 - `npm run demo:build` passes for the retained H5/备案 route.
-- `npm run mini:release-check` passes locally.
-- `npm run mini:preview` generated a WeChat preview package of about 530 KB.
+- `npm run mini:release-check -- --require-clean` passes locally.
+- `npm run mini:preview` generated a WeChat preview package of about 540 KB.
 - GitHub Actions workflow `Build demo and mini program` passed for `main`.
 
 The latest local preview QR was written to:
 
 ```text
-/private/tmp/ziwei-mini-birth-profile-preview.png
+/private/tmp/ziwei-mini-style-preview.png
 ```
 
 ## Release checklist

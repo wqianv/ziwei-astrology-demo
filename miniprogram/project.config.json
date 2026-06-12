@@ -1,5 +1,5 @@
 {
-  "description": "Ziwei astrology web-view mini program shell",
+  "description": "Ziwei astrology native mini program with retained H5 filing route",
   "compileType": "miniprogram",
   "miniprogramRoot": "./",
   "appid": "wxabceec36d7044328",
