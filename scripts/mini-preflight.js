@@ -151,6 +151,14 @@ function checkSettingsFlow() {
     "Settings backend test explains domain, key, and network failures",
     "Settings backend test should translate common domain/key/network failures",
   );
+  passIf(
+    settingsJs.includes("copyDiagnostics") &&
+      settingsJs.includes("Secret included: no") &&
+      settingsWxml.includes("复制诊断信息") &&
+      settingsWxml.includes("诊断信息不包含密钥"),
+    "Settings page can copy a secret-free diagnostic report",
+    "Settings page should copy diagnostics without exposing backend secrets",
+  );
 }
 
 function checkNativeRuntimeSmoke() {

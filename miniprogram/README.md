@@ -30,7 +30,9 @@ flow for the core chart and LLM report experience.
 6. Save the backend access key on the settings page.
 7. Tap `测试后端连接` to verify the request legal domain, backend access key,
    Worker, and model link.
-8. Tap `打开原生排盘`, confirm the send-consent checkbox, and generate one
+8. If the backend test fails on a phone, tap `复制诊断信息`. The copied text does
+   not include the backend access key.
+9. Tap `打开原生排盘`, confirm the send-consent checkbox, and generate one
    native LLM report.
 
 ## Required WeChat platform settings
@@ -125,7 +127,7 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 68 checks.
+- `npm run mini:preflight` passes with 69 checks.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 530 KB.
@@ -171,6 +173,8 @@ Run this after scanning a preview QR or opening an experience version:
 - Settings page saves and clears the backend access key locally.
 - Settings page backend test succeeds, or shows a readable domain/key/network
   error.
+- Settings page can copy diagnostic text without including the backend access
+  key.
 - LLM generation stays disabled until both the key is saved and the send-consent
   checkbox is selected.
 - Slow LLM requests show progress text, and a successful response fills the

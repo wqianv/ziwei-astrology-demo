@@ -33,6 +33,8 @@
 
     <view wx:if="{{notice}}" class="notice {{noticeType}}">{{notice}}</view>
     <view wx:if="{{backendTestResult}}" class="notice {{backendTestType}}">{{backendTestResult}}</view>
+    <button class="secondary compact-action" bindtap="copyDiagnostics">复制诊断信息</button>
+    <view class="hint">诊断信息不包含密钥，只包含域名、接口、密钥保存状态和后端测试结果。</view>
   </view>
 
   <view class="panel">

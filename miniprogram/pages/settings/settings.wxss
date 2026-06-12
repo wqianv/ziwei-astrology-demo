@@ -99,6 +99,13 @@
   color: #2a6f5f;
 }
 
+.compact-action {
+  height: 72rpx;
+  line-height: 72rpx;
+  margin-top: 14rpx;
+  font-size: 27rpx;
+}
+
 .notice {
   margin-top: 14rpx;
   border-radius: 10rpx;

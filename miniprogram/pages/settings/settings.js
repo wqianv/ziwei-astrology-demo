@@ -155,6 +155,25 @@ Page({
     });
   },
 
+  copyDiagnostics() {
+    const diagnostics = buildDiagnostics({
+      backendTestResult: this.data.backendTestResult,
+      backendTestType: this.data.backendTestType,
+      proxyAccessKey: this.data.proxyAccessKey,
+      proxyKeySaved: this.data.proxyKeySaved,
+    });
+
+    wx.setClipboardData({
+      data: diagnostics,
+      success: () => {
+        wx.showToast({
+          title: "已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
   openNativeApp() {
     wx.navigateTo({
       url: "/pages/native/native",
@@ -213,4 +232,29 @@ function formatBackendNetworkError(error) {
   }
 
   return "后端连接测试失败。请确认手机网络正常，并且 api.tanxj.xyz 已配置为 request 合法域名。";
+}
+
+function buildDiagnostics({
+  backendTestResult,
+  backendTestType,
+  proxyAccessKey,
+  proxyKeySaved,
+}) {
+  const keyStatus = proxyKeySaved
+    ? "saved"
+    : String(proxyAccessKey || "").trim()
+      ? "filled-not-saved"
+      : "missing";
+
+  return [
+    "Ziwei Mini Program Diagnostics",
+    `Time: ${new Date().toISOString()}`,
+    `Request domain: ${REQUEST_DOMAIN}`,
+    `Web-view domain: ${WEBVIEW_DOMAIN}`,
+    `LLM endpoint: ${API_URL}`,
+    `Backend key status: ${keyStatus}`,
+    `Backend test status: ${backendTestType || "not-run"}`,
+    `Backend test result: ${backendTestResult || "not run"}`,
+    "Secret included: no",
+  ].join("\n");
 }
