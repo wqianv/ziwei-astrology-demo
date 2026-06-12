@@ -137,6 +137,17 @@ Override the directory with `MINI_ARTIFACT_DIR` or `--artifact-dir <path>`.
 The command runs `mini:readiness` and `mini:preflight` first, then calls the
 local WeChat DevTools CLI with this Mini Program project.
 
+Generate a local, secret-free phone QA record after creating a preview QR:
+
+```bash
+npm run mini:phone-qa
+```
+
+The record is written to `/tmp/ziwei-mini-devtools/phone-qa-*.md` and pre-fills
+the current Git commit plus the latest preview QR path. It is a local testing
+artifact; do not paste backend access keys, model API keys, or other secrets
+into it.
+
 Upload an experience-version draft only when you are ready to create a new
 Mini Program backend draft:
 
@@ -166,13 +177,15 @@ and useful for cross-checking during the备案 path.
 
 As of 2026-06-12 on `main`:
 
-- `npm run mini:preflight` passes with 77 checks.
+- `npm run mini:preflight` passes with 79 checks.
 - `npm run mini:readiness` passes all project-internal gates.
 - `npm run mini:domain-check` confirms the H5 domain returns HTTPS 200 and the
   Worker route returns HTTP 401 without the backend access key.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check -- --require-clean` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 540 KB.
+- `npm run mini:phone-qa` generates a local real-device QA record with the
+  latest preview QR path and no secrets.
 - GitHub Actions workflow `Build demo and mini program` passed for `main`.
 - `PHONE_QA.md` is available as the real-device QA record template.
 - `https://www.tanxj.xyz/` resolves through Cloudflare and returns HTTPS 200.
@@ -204,6 +217,7 @@ The preview command prints the exact QR and metadata paths after it succeeds.
 - [x] Run `npm run mini:domain-check` before review/upload when domain state may
       have changed.
 - [x] Run `npm run mini:preview` and generate a preview QR code.
+- [x] Add `npm run mini:phone-qa` for local real-device QA records.
 - [ ] Scan the preview QR code on a phone.
 - [ ] Upload an experience-version draft with `npm run mini:upload -- --version <version> --desc <description> --confirm-upload`.
 - [ ] Configure `https://www.tanxj.xyz` as web-view business domain.

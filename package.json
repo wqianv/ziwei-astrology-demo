@@ -20,6 +20,7 @@
     "mini:preflight": "node scripts/mini-preflight.js",
     "mini:release-check": "node scripts/mini-release-check.js",
     "mini:preview": "node scripts/mini-devtools.js preview",
+    "mini:phone-qa": "node scripts/mini-phone-qa.js",
     "mini:upload": "node scripts/mini-devtools.js upload",
     "build:sb": "storybook build",
     "build-storybook": "storybook build",

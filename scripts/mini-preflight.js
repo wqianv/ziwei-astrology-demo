@@ -349,6 +349,7 @@ function checkPackageScripts(packageJson) {
   passIf(Boolean(scripts["mini:preflight"]), "package.json has mini:preflight", "package.json missing mini:preflight");
   passIf(Boolean(scripts["mini:release-check"]), "package.json has mini:release-check", "package.json missing mini:release-check");
   passIf(Boolean(scripts["mini:preview"]), "package.json has mini:preview", "package.json missing mini:preview");
+  passIf(Boolean(scripts["mini:phone-qa"]), "package.json has mini:phone-qa", "package.json missing mini:phone-qa");
   passIf(Boolean(scripts["mini:upload"]), "package.json has mini:upload", "package.json missing mini:upload");
 }
 
@@ -359,6 +360,7 @@ function checkDevToolsHelper(packageJson) {
   const readme = readText("miniprogram/README.md");
   const reviewNotes = readText("miniprogram/REVIEW_NOTES.md");
   const phoneQa = readText("miniprogram/PHONE_QA.md");
+  const phoneQaScript = readText("scripts/mini-phone-qa.js");
 
   passIf(
     fileExists("scripts/mini-devtools.js") &&
@@ -408,6 +410,15 @@ function checkDevToolsHelper(packageJson) {
       readme.includes("--confirm-upload"),
     "README documents WeChat DevTools preview/upload flow",
     "README should document preview/upload helper commands",
+  );
+  passIf(
+    fileExists("scripts/mini-phone-qa.js") &&
+      scripts["mini:phone-qa"] === "node scripts/mini-phone-qa.js" &&
+      phoneQaScript.includes("findLatestPreview") &&
+      phoneQaScript.includes("Do not paste backend access keys") &&
+      readme.includes("npm run mini:phone-qa"),
+    "Phone QA helper generates secret-free real-device QA records",
+    "Phone QA helper should generate a local QA record without exposing secrets",
   );
   passIf(
     fileExists("miniprogram/REVIEW_NOTES.md") &&
