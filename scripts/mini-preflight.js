@@ -371,9 +371,11 @@ function checkDevToolsHelper(packageJson) {
     helper.includes('command === "preview"') &&
       helper.includes('command === "upload"') &&
       helper.includes("runReadiness()") &&
-      helper.includes("runPreflight()"),
-    "WeChat DevTools helper supports preview/upload with readiness and preflight",
-    "WeChat DevTools helper should support preview/upload and run readiness/preflight",
+      helper.includes("runPreflight()") &&
+      helper.includes("runReleaseCheck") &&
+      helper.includes("--with-domain-check"),
+    "WeChat DevTools helper supports preview with readiness/preflight and upload with release-check",
+    "WeChat DevTools helper should run readiness/preflight for preview and release-check for upload",
   );
   passIf(
     helper.includes("Upload requires --version <version> and --desc <description>"),

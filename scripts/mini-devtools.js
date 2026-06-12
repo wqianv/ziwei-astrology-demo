@@ -75,8 +75,9 @@ function upload(options) {
     fail("Upload requires --confirm-upload to create a WeChat backend draft.");
   }
 
-  runReadiness();
-  runPreflight();
+  runReleaseCheck({
+    withDomainCheck: options["with-domain-check"] === true,
+  });
   ensureArtifactDir();
 
   const infoOutput = options["info-output"] || path.join(artifactDir, `upload-${timestamp()}.json`);
@@ -108,6 +109,19 @@ function runReadiness() {
 
 function runPreflight() {
   execFileSync("npm", ["run", "mini:preflight"], {
+    cwd: root,
+    stdio: "inherit",
+  });
+}
+
+function runReleaseCheck(options) {
+  const args = ["run", "mini:release-check", "--", "--require-clean"];
+
+  if (options.withDomainCheck) {
+    args.push("--with-domain-check");
+  }
+
+  execFileSync("npm", args, {
     cwd: root,
     stdio: "inherit",
   });
@@ -183,6 +197,7 @@ function printHelp() {
     "  --qr-output <path>      Preview QR output path",
     "  --info-output <path>    Preview/upload info output path",
     "  --confirm-upload        Required for upload; creates a WeChat backend draft",
+    "  --with-domain-check     Upload only: include public H5/Worker domain check",
   ].join("\n"));
 }
 

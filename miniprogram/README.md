@@ -143,9 +143,15 @@ Mini Program backend draft:
 npm run mini:upload -- --version 0.1.0 --desc "native iztro chart preview" --confirm-upload
 ```
 
-The upload command also runs `mini:readiness` and `mini:preflight` first and
+The upload command runs `mini:release-check -- --require-clean` first and
 requires both a version and description. It also requires `--confirm-upload`
-because it creates a new draft in the WeChat Mini Program backend.
+because it creates a new draft in the WeChat Mini Program backend. Add
+`--with-domain-check` when the upload should also verify the public H5 and
+Worker domains before creating the draft:
+
+```bash
+npm run mini:upload -- --version 0.1.0 --desc "native iztro chart preview" --confirm-upload --with-domain-check
+```
 
 Before submitting for review, copy the version description, review comment, and
 reviewer test path from `REVIEW_NOTES.md`.
