@@ -2,14 +2,13 @@
 
 const { execFileSync, spawnSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const project = path.join(root, "miniprogram");
 const cli = "/Applications/wechatwebdevtools.app/Contents/MacOS/cli";
 const defaultPort = "21481";
-const artifactDir = path.join(os.tmpdir(), "ziwei-mini-devtools");
+const defaultArtifactDir = "/tmp/ziwei-mini-devtools";
 
 function main() {
   const [command, ...args] = process.argv.slice(2);
@@ -38,12 +37,14 @@ function main() {
 function preview(options) {
   runReadiness();
   runPreflight();
-  ensureArtifactDir();
 
+  const artifactDir = resolveArtifactDir(options);
   const stamp = timestamp();
   const qrOutput = options["qr-output"] || path.join(artifactDir, `preview-${stamp}.png`);
   const infoOutput = options["info-output"] || path.join(artifactDir, `preview-${stamp}.json`);
   const port = options.port || defaultPort;
+
+  ensureOutputDirs(qrOutput, infoOutput);
 
   runCli([
     "preview",
@@ -78,10 +79,12 @@ function upload(options) {
   runReleaseCheck({
     withDomainCheck: options["with-domain-check"] === true,
   });
-  ensureArtifactDir();
 
+  const artifactDir = resolveArtifactDir(options);
   const infoOutput = options["info-output"] || path.join(artifactDir, `upload-${timestamp()}.json`);
   const port = options.port || defaultPort;
+
+  ensureOutputDirs(infoOutput);
 
   runCli([
     "upload",
@@ -173,8 +176,18 @@ function ensureCli() {
   }
 }
 
-function ensureArtifactDir() {
-  fs.mkdirSync(artifactDir, { recursive: true });
+function resolveArtifactDir(options) {
+  return path.resolve(
+    options["artifact-dir"] ||
+      process.env.MINI_ARTIFACT_DIR ||
+      defaultArtifactDir,
+  );
+}
+
+function ensureOutputDirs(...outputs) {
+  outputs.forEach((output) => {
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+  });
 }
 
 function timestamp() {
@@ -194,6 +207,7 @@ function printHelp() {
     "",
     "Options:",
     "  --port <port>           WeChat DevTools service port, default 21481",
+    "  --artifact-dir <path>   Preview/upload output directory, default /tmp/ziwei-mini-devtools",
     "  --qr-output <path>      Preview QR output path",
     "  --info-output <path>    Preview/upload info output path",
     "  --confirm-upload        Required for upload; creates a WeChat backend draft",

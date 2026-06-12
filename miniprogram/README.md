@@ -133,6 +133,7 @@ npm run mini:preview
 ```
 
 The QR image and preview metadata are written to `/tmp/ziwei-mini-devtools/`.
+Override the directory with `MINI_ARTIFACT_DIR` or `--artifact-dir <path>`.
 The command runs `mini:readiness` and `mini:preflight` first, then calls the
 local WeChat DevTools CLI with this Mini Program project.
 
@@ -179,11 +180,13 @@ As of 2026-06-12 on `main`:
   returns HTTP 401 without `X-Ziwei-Proxy-Key`, which confirms the Worker route
   is reachable and key-protected.
 
-The latest local preview QR was written to:
+The latest local preview QR is written under:
 
 ```text
-/private/tmp/ziwei-mini-gated-preview.png
+/tmp/ziwei-mini-devtools/preview-*.png
 ```
+
+The preview command prints the exact QR and metadata paths after it succeeds.
 
 ## Release checklist
 
