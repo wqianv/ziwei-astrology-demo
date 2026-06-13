@@ -6,7 +6,10 @@
   "vars": {
     "ALLOWED_ORIGIN": "https://wqianv.github.io,https://tanxj.xyz,https://www.tanxj.xyz",
     "LLM_BASE_URL": "https://api.deepseek.com",
-    "LLM_MODEL": "deepseek-v4-pro"
+    "LLM_MODEL": "deepseek-v4-pro",
+    "PUBLIC_HOURLY_LIMIT": "3",
+    "PUBLIC_DAILY_LIMIT": "8",
+    "PUBLIC_IP_DAILY_LIMIT": "60"
   },
   "kv_namespaces": [
     {

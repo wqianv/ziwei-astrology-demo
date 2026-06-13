@@ -62,6 +62,8 @@ function printReleaseSummary() {
   console.log(`Web-view business domain: ${config.WEBVIEW_DOMAIN}`);
   console.log(`LLM endpoint: ${config.API_URL}`);
   console.log(`LLM job endpoint: ${config.LLM_JOB_URL}`);
+  console.log(`Public LLM job endpoint: ${config.PUBLIC_LLM_JOB_URL}`);
+  console.log(`Admin stats endpoint: ${config.ADMIN_STATS_URL}`);
   console.log(`Mini Program source package: ${formatBytes(packageSize)}`);
 
   console.log("\nManual gates still required before review/upload:");
@@ -69,11 +71,12 @@ function printReleaseSummary() {
     "Scan a fresh preview QR on a phone and run the Phone QA checklist.",
     "Confirm https://api.tanxj.xyz is accepted as a WeChat request legal domain.",
     "Confirm https://www.tanxj.xyz is accepted as a web-view business domain, if keeping the H5 route in review.",
-    "Run the settings page backend connectivity test with the access key saved locally.",
-    "Copy diagnostics from the settings page if the backend connectivity test fails.",
-    "Confirm the settings page can clear all local Mini Program data.",
+    "Generate one native background LLM report through the public user entry.",
+    "Long-press the home title and open the management backend.",
+    "Run backend connectivity and admin stats refresh with the access key saved locally.",
+    "Copy diagnostics from the management backend if the backend connectivity test fails.",
+    "Confirm the management backend can clear all local Mini Program data.",
     "Confirm birth date, birth time, and gender restore after reopening and can be reset locally.",
-    "Generate one native background LLM report with the backend access key saved locally.",
     "Confirm the native LLM report restores for the same birth profile and can be cleared locally.",
     "Confirm the native LLM report copy action excludes the backend access key.",
     "Upload only with npm run mini:upload -- --version <version> --desc <description> --confirm-upload.",

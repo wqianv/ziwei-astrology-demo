@@ -17,8 +17,10 @@ function main() {
   checkProjectConfig(projectConfig);
   checkDomains(config);
   checkPages(appJson);
+  checkHomeEntry();
   checkNativeFlow();
   checkSettingsFlow();
+  checkWorkerFlow();
   checkNativeRuntimeSmoke();
   checkWebviewFlow(config);
   checkComplianceCopy();
@@ -77,6 +79,16 @@ function checkDomains(config) {
     "LLM_JOB_URL should be REQUEST_DOMAIN + /api/llm/jobs",
   );
   passIf(
+    config.PUBLIC_LLM_JOB_URL === `${config.REQUEST_DOMAIN}/api/llm/public/jobs`,
+    `Public LLM job URL is aligned: ${config.PUBLIC_LLM_JOB_URL}`,
+    "PUBLIC_LLM_JOB_URL should be REQUEST_DOMAIN + /api/llm/public/jobs",
+  );
+  passIf(
+    config.ADMIN_STATS_URL === `${config.REQUEST_DOMAIN}/api/admin/stats`,
+    `Admin stats URL is aligned: ${config.ADMIN_STATS_URL}`,
+    "ADMIN_STATS_URL should be REQUEST_DOMAIN + /api/admin/stats",
+  );
+  passIf(
     config.WEBVIEW_DOMAIN === config.SITE_URL,
     "WEBVIEW_DOMAIN matches SITE_URL",
     "WEBVIEW_DOMAIN should match SITE_URL",
@@ -104,6 +116,38 @@ function checkPages(appJson) {
       passIf(fileExists(file), `${file} exists`, `${file} is missing`);
     });
   });
+}
+
+function checkHomeEntry() {
+  const homeJs = readText("miniprogram/pages/home/home.js");
+  const homeWxml = readText("miniprogram/pages/home/home.wxml");
+  const config = readText("miniprogram/config.js");
+
+  passIf(
+    homeWxml.includes("开始排盘") &&
+      homeWxml.includes("谈玄机") &&
+      !homeWxml.includes("设置与上线检查") &&
+      !homeWxml.includes("打开原生排盘"),
+    "Home page is a formal user entry instead of a development workbench",
+    "Home page should present the formal user entry and hide development wording",
+  );
+  passIf(
+    homeWxml.includes("bindlongpress=\"openSettings\"") &&
+      homeJs.includes("openSettings"),
+    "Management backend is retained behind a long-press admin entry",
+    "Home page should retain an admin entry without exposing it as the primary user action",
+  );
+  passIf(
+    homeWxml.includes("<ad-custom") &&
+      homeWxml.includes("<ad") &&
+      homeWxml.includes("binderror=\"handleAdError\"") &&
+      homeJs.includes("AD_CUSTOM_UNIT_ID") &&
+      homeJs.includes("AD_BANNER_UNIT_ID") &&
+      config.includes("AD_CUSTOM_UNIT_ID") &&
+      config.includes("AD_BANNER_UNIT_ID"),
+    "Home page supports native Mini Program ads with graceful no-ad handling",
+    "Home page should support configured WeChat ad/ad-custom units and hide failed ads",
+  );
 }
 
 function checkNativeFlow() {
@@ -176,7 +220,9 @@ function checkNativeFlow() {
   passIf(
     nativeJs.includes("LLM_REPORT_STORAGE") &&
       nativeJs.includes("LLM_JOB_STORAGE") &&
-      nativeJs.includes("LLM_JOB_URL") &&
+      nativeJs.includes("PUBLIC_LLM_JOB_URL") &&
+      nativeJs.includes("X-Ziwei-Client-Id") &&
+      nativeJs.includes("ensureClientId") &&
       nativeJs.includes("pollReportJob") &&
       nativeJs.includes("resumeActiveReportJob") &&
       nativeJs.includes("readReportHistory") &&
@@ -185,8 +231,16 @@ function checkNativeFlow() {
       nativeJs.includes("readReportCache") &&
       nativeJs.includes("clearCachedReport") &&
       nativeWxml.includes("清除本机解读"),
-    "Native LLM report uses background jobs, date-keyed history, and can be cleared",
-    "Native LLM report should use background jobs, date-keyed history, and offer a clear action",
+    "Native user LLM report uses public background jobs, client id, date-keyed history, and can be cleared",
+    "Native LLM report should use public background jobs, client id, date-keyed history, and offer a clear action",
+  );
+  passIf(
+    !nativeWxml.includes("设置密钥") &&
+      !nativeWxml.includes("更换密钥") &&
+      !nativeWxml.includes("去设置访问密钥") &&
+      !nativeWxml.includes("还没有保存访问密钥"),
+    "Native formal user flow no longer asks ordinary users to configure backend keys",
+    "Native user flow should not expose backend key setup controls",
   );
   passIf(
     nativeJs.includes("buildJobSignature") &&
@@ -249,9 +303,63 @@ function checkSettingsFlow() {
       settingsJs.includes("LLM_CONSENT_STORAGE") &&
       settingsJs.includes("LLM_JOB_STORAGE") &&
       settingsJs.includes("LLM_REPORT_STORAGE") &&
+      settingsJs.includes("CLIENT_ID_STORAGE") &&
       settingsWxml.includes("清除本机数据"),
     "Settings page can clear locally stored Mini Program data",
-    "Settings page should clear local key, birth profile, consent, and report cache",
+    "Settings page should clear local key, client id, birth profile, consent, and report cache",
+  );
+  passIf(
+    settingsJs.includes("ADMIN_STATS_URL") &&
+      settingsJs.includes("refreshAdminStats") &&
+      settingsJs.includes("buildStatsCards") &&
+      settingsWxml.includes("使用统计") &&
+      settingsJs.includes("今日限流") &&
+      settingsJs.includes("今日失败") &&
+      settingsJs.includes("无效密钥"),
+    "Settings management backend shows usage, failures, invalid keys, and rate-limit stats",
+    "Settings management backend should show Worker usage/failure/rate-limit statistics",
+  );
+  passIf(
+    settingsJs.includes("AD_CUSTOM_UNIT_ID") &&
+      settingsJs.includes("AD_BANNER_UNIT_ID") &&
+      settingsJs.includes("adStatusText") &&
+      settingsWxml.includes("广告配置") &&
+      settingsWxml.includes("原生模板广告 unit-id"),
+    "Settings management backend shows Mini Program native ad configuration status",
+    "Settings page should show ad unit configuration status for launch readiness",
+  );
+}
+
+function checkWorkerFlow() {
+  const worker = readText("backend/cloudflare-worker/src/index.js");
+  const wrangler = readText("backend/cloudflare-worker/wrangler.jsonc");
+
+  passIf(
+    worker.includes("PUBLIC_JOBS_PATH") &&
+      worker.includes("/api/llm/public/jobs") &&
+      worker.includes("publicClient") &&
+      worker.includes("checkPublicRateLimit") &&
+      worker.includes("X-Ziwei-Client-Id"),
+    "Worker exposes public Mini Program job endpoints with client-based rate limiting",
+    "Worker should expose public job endpoints and rate-limit by Mini Program client id",
+  );
+  passIf(
+    worker.includes("ADMIN_STATS_PATH") &&
+      worker.includes("/api/admin/stats") &&
+      worker.includes("handleAdminStats") &&
+      worker.includes("readMetricBucket") &&
+      worker.includes("rateLimited") &&
+      worker.includes("invalidKey") &&
+      worker.includes("failedJobs"),
+    "Worker exposes protected admin stats for usage, failures, invalid keys, and rate limits",
+    "Worker should expose protected admin stats with failures and rate-limit counters",
+  );
+  passIf(
+    wrangler.includes("PUBLIC_HOURLY_LIMIT") &&
+      wrangler.includes("PUBLIC_DAILY_LIMIT") &&
+      wrangler.includes("PUBLIC_IP_DAILY_LIMIT"),
+    "Worker config includes default public rate-limit variables",
+    "wrangler config should include public rate-limit variables",
   );
 }
 

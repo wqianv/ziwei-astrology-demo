@@ -1,7 +1,17 @@
-const { SHARE_PATH, SHARE_TITLE, SITE_URL } = require("../../config");
+const {
+  AD_BANNER_UNIT_ID,
+  AD_CUSTOM_UNIT_ID,
+  SHARE_PATH,
+  SHARE_TITLE,
+  SITE_URL,
+} = require("../../config");
 
 Page({
   data: {
+    adBannerUnitId: AD_BANNER_UNIT_ID,
+    adCustomUnitId: AD_CUSTOM_UNIT_ID,
+    adHidden: false,
+    hasAdUnit: Boolean(AD_CUSTOM_UNIT_ID || AD_BANNER_UNIT_ID),
     siteUrl: SITE_URL,
   },
 
@@ -26,6 +36,18 @@ Page({
   openSettings() {
     wx.navigateTo({
       url: "/pages/settings/settings",
+    });
+  },
+
+  handleAdLoad() {
+    this.setData({
+      adHidden: false,
+    });
+  },
+
+  handleAdError() {
+    this.setData({
+      adHidden: true,
     });
   },
 

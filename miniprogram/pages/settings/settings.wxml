@@ -1,23 +1,52 @@
 <view class="page">
   <view class="hero">
-    <view class="eyebrow">settings</view>
-    <view class="title">设置与上线检查</view>
-    <view class="summary">管理本机后端访问密钥、发送确认，并核对微信平台需要放行的域名。</view>
+    <view class="eyebrow">admin</view>
+    <view class="title">管理后台</view>
+    <view class="summary">管理后端密钥、接口诊断、使用统计、失败次数和广告配置状态。</view>
   </view>
 
   <view class="panel">
-    <view class="panel-title">后端访问密钥</view>
+    <view class="panel-title">使用统计</view>
+    <view class="hint">统计来自 Worker KV，包含公开用户入口的生成、完成、失败、限流和无效密钥次数。</view>
+    <button
+      class="secondary"
+      loading="{{loadingStats}}"
+      disabled="{{loadingStats || !proxyAccessKey}}"
+      bindtap="refreshAdminStats"
+    >
+      刷新统计
+    </button>
+    <view wx:if="{{statsResult}}" class="notice {{statsResultType}}">{{statsResult}}</view>
+
+    <view class="stats-grid">
+      <view class="stat-card" wx:for="{{statsCards}}" wx:key="label">
+        <view class="stat-label">{{item.label}}</view>
+        <view class="stat-value">{{item.value}}</view>
+        <view class="stat-subtext">{{item.subtext}}</view>
+      </view>
+    </view>
+
+    <view class="meta-list">
+      <view class="meta-row" wx:for="{{statsMetaRows}}" wx:key="label">
+        <view class="meta-label">{{item.label}}</view>
+        <view class="meta-value">{{item.value}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="panel">
+    <view class="panel-title">管理后台密钥</view>
     <view class="field">
-      <view class="label">访问 api.tanxj.xyz 的口令</view>
+      <view class="label">访问管理接口的口令</view>
       <input
         class="key-input"
         password
         value="{{proxyAccessKey}}"
-        placeholder="粘贴后端访问密钥"
+        placeholder="粘贴管理后台密钥"
         bindinput="handleProxyKeyInput"
       />
     </view>
-    <view class="hint">密钥只保存在当前微信本机存储里；生成解读时会作为请求头发给 Worker 做准入校验。</view>
+    <view class="hint">密钥只保存在当前微信本机存储里；普通用户生成解读不需要填写这个密钥。</view>
 
     <button class="primary" disabled="{{!proxyAccessKey}}" bindtap="saveProxyKey">保存到本机微信</button>
     <button wx:if="{{proxyKeySaved}}" class="secondary" bindtap="clearProxyKey">清除本机密钥</button>
@@ -71,6 +100,42 @@
       </view>
       <button class="copy-button" data-value="{{llmJobUrl}}" bindtap="copyValue">复制</button>
     </view>
+
+    <view class="domain-row">
+      <view class="domain-main">
+        <view class="domain-title">公开用户任务接口</view>
+        <view class="domain-value">{{publicLlmJobUrl}}</view>
+      </view>
+      <button class="copy-button" data-value="{{publicLlmJobUrl}}" bindtap="copyValue">复制</button>
+    </view>
+
+    <view class="domain-row">
+      <view class="domain-main">
+        <view class="domain-title">管理统计接口</view>
+        <view class="domain-value">{{adminStatsUrl}}</view>
+      </view>
+      <button class="copy-button" data-value="{{adminStatsUrl}}" bindtap="copyValue">复制</button>
+    </view>
+  </view>
+
+  <view class="panel">
+    <view class="panel-title">广告配置</view>
+    <view class="hint">{{adStatusText}}</view>
+    <view class="domain-row">
+      <view class="domain-main">
+        <view class="domain-title">原生模板广告 unit-id</view>
+        <view class="domain-value">{{adCustomUnitId || '未配置'}}</view>
+      </view>
+      <button class="copy-button" data-value="{{adCustomUnitId}}" disabled="{{!adCustomUnitId}}" bindtap="copyValue">复制</button>
+    </view>
+    <view class="domain-row">
+      <view class="domain-main">
+        <view class="domain-title">Banner 广告 unit-id</view>
+        <view class="domain-value">{{adBannerUnitId || '未配置'}}</view>
+      </view>
+      <button class="copy-button" data-value="{{adBannerUnitId}}" disabled="{{!adBannerUnitId}}" bindtap="copyValue">复制</button>
+    </view>
+    <view class="hint">广告单元 ID 需要在微信小程序后台的流量主模块创建；无广告返回时前台会自动隐藏广告区域。</view>
   </view>
 
   <view class="panel">

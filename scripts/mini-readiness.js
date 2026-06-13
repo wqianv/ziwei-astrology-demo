@@ -34,8 +34,10 @@ function main() {
     {
       label: "Request domain and LLM endpoints are aligned",
       passed: config.API_URL === `${config.REQUEST_DOMAIN}/api/llm/interpret` &&
-        config.LLM_JOB_URL === `${config.REQUEST_DOMAIN}/api/llm/jobs`,
-      evidence: `${config.API_URL}, ${config.LLM_JOB_URL}`,
+        config.LLM_JOB_URL === `${config.REQUEST_DOMAIN}/api/llm/jobs` &&
+        config.PUBLIC_LLM_JOB_URL === `${config.REQUEST_DOMAIN}/api/llm/public/jobs` &&
+        config.ADMIN_STATS_URL === `${config.REQUEST_DOMAIN}/api/admin/stats`,
+      evidence: `${config.API_URL}, ${config.LLM_JOB_URL}, ${config.PUBLIC_LLM_JOB_URL}, ${config.ADMIN_STATS_URL}`,
     },
     {
       label: "H5 domain is configured for the web-view path",
@@ -71,9 +73,10 @@ function main() {
     `Scan the latest preview QR on a phone and run the Phone QA checklist.`,
     `Confirm ${config.REQUEST_DOMAIN} is accepted as a WeChat request legal domain.`,
     `Confirm ${config.WEBVIEW_DOMAIN} is accepted as a web-view business domain if keeping the H5 route in review.`,
-    `Save the backend access key locally in the Mini Program settings page.`,
-    `Run the settings page backend connectivity test on a phone.`,
-    `Generate one native LLM report on a phone and verify restore, clear, and copy actions.`,
+    `Generate one native LLM report through the public Mini Program entry on a phone and verify restore, clear, and copy actions.`,
+    `Long-press the home title to open the management backend.`,
+    `Save the backend access key locally in the management backend.`,
+    `Run backend connectivity and admin stats refresh on a phone.`,
     `Upload an experience-version draft only with mini:upload and --confirm-upload.`,
   ];
 

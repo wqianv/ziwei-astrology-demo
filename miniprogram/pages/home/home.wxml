@@ -1,30 +1,46 @@
 <view class="page">
   <view class="hero">
-    <view class="eyebrow">traditional astrology lab</view>
-    <view class="title">命理排盘工作台</view>
-    <view class="summary">紫微斗数、四柱八字与 LLM 解读的移动入口。</view>
+    <view class="eyebrow">紫微斗数 · 四柱八字</view>
+    <view class="title" bindlongpress="openSettings">谈玄机</view>
+    <view class="summary">输入出生日期、时辰和性别，生成命盘摘要，并把传统术语翻译成更容易理解的分项解读。</view>
   </view>
 
   <view class="actions">
-    <button class="primary" bindtap="openNativeApp">打开原生排盘</button>
+    <button class="primary" bindtap="openNativeApp">开始排盘</button>
     <view class="secondary-actions">
-      <button class="secondary" bindtap="openWebApp">网页版完整盘</button>
+      <button class="secondary" bindtap="openCompliance">使用说明</button>
       <button class="secondary" open-type="share">分享给朋友</button>
     </view>
   </view>
 
+  <view wx:if="{{hasAdUnit}}" class="ad-wrap {{adHidden ? 'ad-wrap-hidden' : ''}}">
+    <ad-custom
+      wx:if="{{adCustomUnitId}}"
+      unit-id="{{adCustomUnitId}}"
+      bindload="handleAdLoad"
+      binderror="handleAdError"
+    />
+    <ad
+      wx:else
+      unit-id="{{adBannerUnitId}}"
+      ad-intervals="60"
+      bindload="handleAdLoad"
+      binderror="handleAdError"
+    />
+  </view>
+
   <view class="panel">
-    <view class="row" bindtap="openSettings">
+    <view class="row" bindtap="openCompliance">
       <view>
-        <view class="row-title">设置与上线检查</view>
-        <view class="row-text">保存后端访问密钥、复制微信平台域名</view>
+        <view class="row-title">传统文化参考</view>
+        <view class="row-text">解读不构成确定性判断，重要事项请结合现实信息做决定</view>
       </view>
       <view class="chevron">›</view>
     </view>
-    <view class="row" bindtap="openCompliance">
+    <view class="row" bindtap="openNativeApp">
       <view>
-        <view class="row-title">合规说明与使用边界</view>
-        <view class="row-text">传统文化参考、隐私与模型解读说明</view>
+        <view class="row-title">小程序内生成</view>
+        <view class="row-text">出生信息只保存在本机微信，解读按本次问询日期关联保存</view>
       </view>
       <view class="chevron">›</view>
     </view>
@@ -38,6 +54,6 @@
   </view>
 
   <view class="notice">
-    原生版已接入 iztro 命盘摘要和 LLM 解读闭环；网页版完整盘继续保留，用于查看更完整盘面和备案路线。
+    生成解读会发送当前命盘摘要到后端模型服务；报告会保存在当前微信本机缓存中，可随时清除。
   </view>
 </view>

@@ -194,11 +194,8 @@
     <view class="panel-heading report-header">
       <view>
         <view class="panel-title">命盘解读</view>
-        <view class="panel-note">按当前命盘生成，密钥仅存本机。</view>
+        <view class="panel-note">按本次问询日期生成。</view>
       </view>
-      <button class="text-button" bindtap="openSettings">
-        {{proxyKeySaved ? '更换密钥' : '设置密钥'}}
-      </button>
     </view>
 
     <view class="report-date-row">
@@ -206,8 +203,7 @@
       <view class="report-date-value">{{queryDate}}</view>
     </view>
 
-    <view wx:if="{{proxyKeySaved}}" class="notice success">{{saveNotice || '已读取本机保存的访问密钥。'}}</view>
-    <view wx:else class="notice warning">还没有保存访问密钥。先去设置页保存，再回来生成解读。</view>
+    <view wx:if="{{saveNotice}}" class="notice success">{{saveNotice}}</view>
 
     <checkbox-group class="consent-group" bindchange="handleConsentChange">
       <label class="consent-row">
@@ -232,7 +228,6 @@
       {{generateButtonText}}
     </button>
 
-    <button wx:if="{{!proxyKeySaved}}" class="secondary compact-action" bindtap="openSettings">去设置访问密钥</button>
     <view wx:if="{{error}}" class="notice error">{{error}}</view>
   </view>
 

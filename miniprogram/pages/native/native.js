@@ -1,9 +1,10 @@
 const {
   BIRTH_PROFILE_STORAGE,
+  CLIENT_ID_STORAGE,
   LLM_CONSENT_STORAGE,
   LLM_JOB_STORAGE,
-  LLM_JOB_URL,
   LLM_REPORT_STORAGE,
+  PUBLIC_LLM_JOB_URL,
   PROXY_KEY_STORAGE,
   SHARE_TITLE,
   SITE_URL,
@@ -40,6 +41,7 @@ Page({
     birthProfileNotice: "",
     proxyAccessKey: "",
     proxyKeySaved: false,
+    clientId: "",
     llmConsentAccepted: false,
     canGenerate: false,
     queryDate: currentQueryDate(),
@@ -93,13 +95,14 @@ Page({
   syncProxyAccessKey() {
     const savedProxyAccessKey = wx.getStorageSync(PROXY_KEY_STORAGE) || "";
     const llmConsentAccepted = wx.getStorageSync(LLM_CONSENT_STORAGE) === true;
+    const clientId = ensureClientId();
 
     this.setData({
       proxyAccessKey: savedProxyAccessKey,
       proxyKeySaved: Boolean(savedProxyAccessKey.trim()),
+      clientId,
       llmConsentAccepted,
       canGenerate: canGenerateReport({
-        accessKey: savedProxyAccessKey,
         consentAccepted: llmConsentAccepted,
         loading: this.data.loading,
       }),
@@ -169,7 +172,7 @@ Page({
   clearBirthProfile() {
     wx.showModal({
       title: "重置出生信息",
-      content: "会清除本机保存的生日、时辰和性别，并恢复为默认示例；不会清除访问密钥和已保存解读。",
+        content: "会清除本机保存的生日、时辰和性别，并恢复为默认示例；不会清除已保存解读和管理后台密钥。",
       confirmText: "重置",
       success: (result) => {
         if (!result.confirm) {
@@ -221,7 +224,6 @@ Page({
     this.setData({
       llmConsentAccepted,
       canGenerate: canGenerateReport({
-        accessKey: this.data.proxyAccessKey,
         consentAccepted: llmConsentAccepted,
         loading: this.data.loading,
       }),
@@ -254,15 +256,6 @@ Page({
   },
 
   generateReport() {
-    const accessKey = this.data.proxyAccessKey.trim();
-
-    if (!accessKey) {
-      this.setData({
-        error: "请先到设置页保存访问密钥。密钥只保存在本机微信里。",
-      });
-      return;
-    }
-
     if (!this.data.llmConsentAccepted) {
       this.setData({
         error: "请先勾选生成确认。生成解读时会使用当前出生信息和命盘摘要。",
@@ -301,12 +294,12 @@ Page({
     this.startTimer();
 
     wx.request({
-      url: LLM_JOB_URL,
+      url: PUBLIC_LLM_JOB_URL,
       method: "POST",
       timeout: 30000,
       header: {
         "Content-Type": "application/json",
-        "X-Ziwei-Proxy-Key": accessKey,
+        "X-Ziwei-Client-Id": this.data.clientId || ensureClientId(),
       },
       data: {
         prompt,
@@ -330,7 +323,6 @@ Page({
         }
 
         jobAccepted = true;
-        wx.setStorageSync(PROXY_KEY_STORAGE, accessKey);
         saveActiveReportJob({
           jobId,
           key: reportCacheKey,
@@ -341,11 +333,10 @@ Page({
         this.setData({
           activeJobId: jobId,
           activeJobSignature: buildJobSignature(jobId),
-          proxyKeySaved: true,
           saveNotice: "已提交后台生成；可以停留等待，也可以稍后回来查看。",
           loadingTip: loadingTipFor(this.data.elapsedSeconds),
         });
-        this.scheduleJobPoll(accessKey, reportCacheKey, jobId, 1200);
+        this.scheduleJobPoll(reportCacheKey, jobId, 1200);
       },
       fail: (error) => {
         this.setData({
@@ -360,15 +351,15 @@ Page({
     });
   },
 
-  pollReportJob(accessKey, reportCacheKey, jobId) {
+  pollReportJob(reportCacheKey, jobId) {
     const queryDate = queryDateFromReportKey(reportCacheKey) || currentQueryDate();
 
     wx.request({
-      url: `${LLM_JOB_URL}/${encodeURIComponent(jobId)}`,
+      url: `${PUBLIC_LLM_JOB_URL}/${encodeURIComponent(jobId)}`,
       method: "GET",
       timeout: 20000,
       header: {
-        "X-Ziwei-Proxy-Key": accessKey,
+        "X-Ziwei-Client-Id": this.data.clientId || ensureClientId(),
       },
       success: (response) => {
         if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -380,7 +371,6 @@ Page({
 
         if (data.status === "done") {
           this.applyReportData({
-            accessKey,
             data: {
               ...data,
               queryDate,
@@ -399,21 +389,21 @@ Page({
         this.setData({
           loadingTip: loadingTipFor(this.data.elapsedSeconds, data.status),
         });
-        this.scheduleJobPoll(accessKey, reportCacheKey, jobId, pollDelayFor(this.data.elapsedSeconds));
+        this.scheduleJobPoll(reportCacheKey, jobId, pollDelayFor(this.data.elapsedSeconds));
       },
       fail: () => {
         this.setData({
           loadingTip: "本机暂时查不到结果；任务仍在生成服务中，稍后会自动再查。",
         });
-        this.scheduleJobPoll(accessKey, reportCacheKey, jobId, pollDelayFor(this.data.elapsedSeconds));
+        this.scheduleJobPoll(reportCacheKey, jobId, pollDelayFor(this.data.elapsedSeconds));
       },
     });
   },
 
-  scheduleJobPoll(accessKey, reportCacheKey, jobId, delay) {
+  scheduleJobPoll(reportCacheKey, jobId, delay) {
     this.stopJobPoller();
     this.pollTimer = setTimeout(() => {
-      this.pollReportJob(accessKey, reportCacheKey, jobId);
+      this.pollReportJob(reportCacheKey, jobId);
     }, delay);
   },
 
@@ -427,7 +417,6 @@ Page({
       activeJobSignature: "",
       error: errorMessage || this.data.error,
       canGenerate: canGenerateReport({
-        accessKey: this.data.proxyAccessKey,
         consentAccepted: this.data.llmConsentAccepted,
         loading: false,
       }),
@@ -435,7 +424,7 @@ Page({
     });
   },
 
-  applyReportData({ accessKey, data, reportCacheKey, cachedReportNotice }) {
+  applyReportData({ data, reportCacheKey, cachedReportNotice }) {
     const queryDate = data.queryDate || queryDateFromReportKey(reportCacheKey) || currentQueryDate();
     const parsed = parseLLMReport(data.content || "");
     const usage = data.usage || {};
@@ -456,7 +445,6 @@ Page({
       matchedCount: parsed.matchedCount,
     };
 
-    wx.setStorageSync(PROXY_KEY_STORAGE, accessKey);
     saveReportCache(reportCache);
     clearActiveReportJob();
     this.stopTimer();
@@ -467,10 +455,8 @@ Page({
         loading: false,
         activeJobId: "",
         activeJobSignature: "",
-        proxyKeySaved: true,
         generateButtonText: "生成原生解读",
         canGenerate: canGenerateReport({
-          accessKey,
           consentAccepted: this.data.llmConsentAccepted,
           loading: false,
         }),
@@ -486,24 +472,21 @@ Page({
       matchedCount: parsed.matchedCount,
       hasReport: true,
       cachedReportNotice,
-      proxyKeySaved: true,
       loading: false,
       activeJobId: "",
       activeJobSignature: "",
       queryDate,
       canGenerate: canGenerateReport({
-        accessKey,
         consentAccepted: this.data.llmConsentAccepted,
         loading: false,
       }),
       generateButtonText: "生成原生解读",
-      saveNotice: "已在本机微信保存访问密钥，下次打开会自动带出。",
+      saveNotice: "解读已保存到本机微信。",
     });
   },
 
   resumeActiveReportJob() {
     const activeJob = readActiveReportJob();
-    const accessKey = this.data.proxyAccessKey.trim();
     const queryDate = currentQueryDate();
 
     if (
@@ -517,13 +500,6 @@ Page({
 
     if (this.data.hasReport) {
       clearActiveReportJob();
-      return;
-    }
-
-    if (!accessKey) {
-      this.setData({
-        saveNotice: "有一份解读还没取回；保存访问密钥后会继续查询。",
-      });
       return;
     }
 
@@ -542,7 +518,7 @@ Page({
       saveNotice: "已恢复后台任务，正在查询结果。",
     });
     this.startTimer();
-    this.scheduleJobPoll(accessKey, activeJob.key, activeJob.jobId, 300);
+    this.scheduleJobPoll(activeJob.key, activeJob.jobId, 300);
   },
 
   refreshProfile() {
@@ -605,7 +581,7 @@ Page({
   clearCachedReport() {
     wx.showModal({
       title: "清除本机解读",
-      content: "会清除当前小程序本机保存的解读历史，不会清除访问密钥。",
+      content: "会清除当前小程序本机保存的解读历史，不会清除出生信息和管理后台密钥。",
       confirmText: "清除",
       success: (result) => {
         if (!result.confirm) {
@@ -925,7 +901,7 @@ function buildReportCopyText(data) {
     .join("\n\n");
 
   return [
-    "命理排盘工作台 - 命盘解读",
+    "谈玄机 - 命盘解读",
     `出生日期：${data.birthDate}`,
     `出生时辰：${data.birthTimeText}`,
     `性别：${genderOption.label}`,
@@ -951,7 +927,22 @@ function findPalaceByName(palaces, name) {
 }
 
 function canGenerateReport({ accessKey, consentAccepted, loading }) {
-  return Boolean(String(accessKey || "").trim()) && Boolean(consentAccepted) && !loading;
+  return Boolean(consentAccepted) && !loading;
+}
+
+function ensureClientId() {
+  const saved = String(wx.getStorageSync(CLIENT_ID_STORAGE) || "");
+
+  if (/^mini-[a-z0-9-]{16,80}$/i.test(saved)) {
+    return saved;
+  }
+
+  const generated = `mini-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 12)}`;
+
+  wx.setStorageSync(CLIENT_ID_STORAGE, generated);
+  return generated;
 }
 
 function loadingTipFor(seconds, status) {
@@ -1005,11 +996,15 @@ function formatRequestError(statusCode, data) {
     data && typeof data.error === "string" ? data.error : "生成服务没有返回明确错误";
 
   if (statusCode === 401) {
-    return "访问密钥不正确。请到设置页重新保存后再试。";
+    return "生成服务暂时不可用，请稍后再试。";
   }
 
   if (statusCode === 403) {
-    return "生成服务拒绝了这次请求。请检查访问配置后再试。";
+    return "生成服务拒绝了这次请求，请稍后再试。";
+  }
+
+  if (statusCode === 429) {
+    return "今天生成次数已到上限。可以稍后再试，已生成的本机解读不会受影响。";
   }
 
   if (statusCode === 400 && rawError.includes("Missing prompt")) {

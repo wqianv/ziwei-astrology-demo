@@ -36,6 +36,20 @@ async function main() {
     allowedStatusCodes: [401],
     bodyPattern: /Invalid backend access key|backend access key|access key/i,
   });
+  await checkHttpsStatus(checks, "Worker public job route", config.PUBLIC_LLM_JOB_URL, {
+    method: "POST",
+    body: JSON.stringify({ prompt: "domain-check" }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    allowedStatusCodes: [400],
+    bodyPattern: /Missing client id/i,
+  });
+  await checkHttpsStatus(checks, "Worker admin stats route", config.ADMIN_STATS_URL, {
+    method: "GET",
+    allowedStatusCodes: [401],
+    bodyPattern: /Invalid backend access key|backend access key|access key/i,
+  });
 
   console.log("Mini Program domain check\n");
   checks.forEach((check) => {

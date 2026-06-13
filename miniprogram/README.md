@@ -6,11 +6,12 @@ flow for the core chart and LLM report experience.
 
 ## What is included
 
-- Native home page with entry actions.
+- Formal native home page with user entry actions and optional WeChat native ads.
 - Native birth form, iztro-backed Ziwei/Four-Pillars summary, Worker-backed LLM
   request, and sectioned report display.
-- Settings page for local backend access key management and launch-domain
-  checklist, plus a minimal backend connectivity test.
+- Hidden management page for local admin key management, launch-domain checks,
+  backend connectivity test, Worker usage stats, failure counts, rate-limit
+  counts, and ad configuration status.
 - `web-view` page that opens the production H5 app for the complete Ziwei chart.
 - Share entry through the home page and the web-view page.
 - Compliance and usage-boundary page for review-friendly wording.
@@ -26,16 +27,17 @@ flow for the core chart and LLM report experience.
    npm run mini:preflight
    ```
 
-5. Run the home page, then open `设置与上线检查`.
-6. Save the backend access key on the settings page.
-7. Tap `测试后端连接` to verify the request legal domain, backend access key,
+5. Run the home page, then tap `开始排盘`.
+6. Confirm the send-consent checkbox and generate one native LLM report through
+   the public rate-limited job endpoint.
+7. Long-press the home title to open `管理后台`.
+8. Save the backend access key on the management page.
+9. Tap `测试后端连接` to verify the request legal domain, backend access key,
    Worker, and model link.
-8. If the backend test fails on a phone, tap `复制诊断信息`. The copied text does
+10. If the backend test fails on a phone, tap `复制诊断信息`. The copied text does
    not include the backend access key.
-9. Use `清除本机数据` on the settings page when you need to reset local key,
-   birth profile, consent, and latest report cache.
-10. Tap `打开原生排盘`, confirm the send-consent checkbox, and generate one
-   native LLM report.
+11. Use `清除本机数据` on the management page when you need to reset local key,
+    client id, birth profile, consent, and latest report cache.
 
 ## Required WeChat platform settings
 
@@ -56,7 +58,8 @@ The H5 app calls the Worker at `https://api.tanxj.xyz` from inside the web-view.
 Keep the Worker CORS allowlist aligned with the production frontend domain.
 The native Mini Program request normally sends no browser `Origin`; the current
 Worker accepts requests without an `Origin` header and still requires
-`X-Ziwei-Proxy-Key`.
+`X-Ziwei-Client-Id` for the public Mini Program job endpoint. Protected
+management endpoints still require `X-Ziwei-Proxy-Key`.
 
 If备案 or account subject verification blocks `web-view`, the native flow can
 still continue independently once the request legal domain is accepted. The H5
@@ -75,10 +78,9 @@ without opening the H5 app:
    ranges.
 4. Explicit send-consent checkbox before the native LLM request; the consent
    flag is saved in local WeChat storage.
-5. Backend access key managed on the settings page and saved in local WeChat
-   storage.
+5. Anonymous local client id managed in WeChat storage for public rate limiting.
 6. Background LLM job submission through
-   `https://api.tanxj.xyz/api/llm/jobs`, with local polling and restore after
+   `https://api.tanxj.xyz/api/llm/public/jobs`, with local polling and restore after
    returning to the page.
 7. Progress and error states for slow, queued, or blocked LLM jobs.
 8. Sectioned LLM report display.
@@ -182,7 +184,7 @@ As of 2026-06-12 on `main`:
 - `npm run mini:preflight` passes with 80 checks.
 - `npm run mini:readiness` passes all project-internal gates.
 - `npm run mini:domain-check` confirms the H5 domain returns HTTPS 200 and the
-  Worker route returns HTTP 401 without the backend access key.
+  protected Worker route returns HTTP 401 without the backend access key.
 - `npm run demo:build` passes for the retained H5/备案 route.
 - `npm run mini:release-check -- --require-clean` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 540 KB.
@@ -195,6 +197,8 @@ As of 2026-06-12 on `main`:
   `https://api.tanxj.xyz/api/llm/jobs` resolve through Cloudflare and return
   HTTP 401 without `X-Ziwei-Proxy-Key`, which confirms the Worker routes are
   reachable and key-protected.
+- `https://api.tanxj.xyz/api/llm/public/jobs` is the public Mini Program job
+  endpoint and is rate-limited by local client id plus coarse IP bucket.
 
 The latest local preview QR is written under:
 
@@ -226,10 +230,11 @@ The preview command prints the exact QR and metadata paths after it succeeds.
 - [ ] Configure `https://www.tanxj.xyz` as web-view business domain.
 - [ ] Add any WeChat domain verification file to the production H5 root if
       requested by the platform.
-- [ ] Save the backend access key from `设置与上线检查`.
-- [ ] Run `测试后端连接` successfully on a phone.
-- [ ] Confirm `清除本机数据` removes local key, birth profile, send consent, and
-      latest report cache.
+- [ ] Long-press the home title to open `管理后台`.
+- [ ] Save the backend access key in `管理后台`.
+- [ ] Run `测试后端连接` and `刷新统计` successfully on a phone.
+- [ ] Confirm `清除本机数据` removes local key, client id, birth profile, send
+      consent, and latest report cache.
 - [ ] Confirm birth date, birth time, and gender restore after reopening and can
       be reset locally.
 - [ ] Confirm the native send-consent checkbox before generating an LLM report.
@@ -252,15 +257,15 @@ Run this after scanning a preview QR or opening an experience version:
   clears the local saved profile.
 - The 4x4 Ziwei board fits the phone width and palace selection updates the
   detail card.
-- Settings page saves and clears the backend access key locally.
-- Settings page backend test succeeds, or shows a readable domain/key/network
+- Management page saves and clears the backend access key locally.
+- Management page backend test succeeds, or shows a readable domain/key/network
   error.
-- Settings page can copy diagnostic text without including the backend access
+- Management page can refresh Worker usage/failure/rate-limit statistics.
+- Management page can copy diagnostic text without including the backend access
   key.
-- Settings page `清除本机数据` resets local key, birth profile, send consent, and
-  latest report cache.
-- LLM generation stays disabled until both the key is saved and the send-consent
-  checkbox is selected.
+- Management page `清除本机数据` resets local key, client id, birth profile, send
+  consent, and latest report cache.
+- LLM generation stays disabled until the send-consent checkbox is selected.
 - Slow LLM requests show progress text, and a successful response fills the
   sectioned report cards.
 - Reopening the same birth profile restores the latest local LLM report, and
