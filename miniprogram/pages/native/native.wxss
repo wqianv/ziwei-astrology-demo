@@ -879,6 +879,10 @@
   margin-top: 24rpx;
 }
 
+.guide-entry {
+  margin-top: 14rpx;
+}
+
 @keyframes progressPulse {
   from {
     transform: translateX(-18%);

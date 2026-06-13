@@ -6,14 +6,14 @@ flow for the core chart and LLM report experience.
 
 ## What is included
 
-- Formal native home page with user entry actions and optional WeChat native ads.
+- Direct native chart page as the Mini Program entry.
 - Native birth form, iztro-backed Ziwei/Four-Pillars summary, Worker-backed LLM
   request, and sectioned report display.
 - Hidden management page gated by admin username/password and owner WeChat identity,
   with launch-domain checks, backend connectivity test, Worker usage stats,
   failure counts, rate-limit counts, and ad configuration status.
 - `web-view` page that opens the production H5 app for the complete Ziwei chart.
-- Share entry through the home page and the web-view page.
+- Share entry through the native chart page and the web-view page.
 - Compliance and usage-boundary page for review-friendly wording.
 
 ## Local setup
@@ -27,10 +27,10 @@ flow for the core chart and LLM report experience.
    npm run mini:preflight
    ```
 
-5. Run the home page, then tap `开始排盘`.
+5. Run the Mini Program and confirm it opens directly to the native chart page.
 6. Confirm the send-consent checkbox and generate one native LLM report through
    the public rate-limited job endpoint.
-7. Open `使用说明`, tap the `模型解读` heading seven times, then log in to `管理后台` with the admin account on the owner WeChat account.
+7. Open the bottom `使用说明`, tap the `模型解读` heading seven times, then log in to `管理后台` with the admin account on the owner WeChat account.
 8. Tap `测试后端连接` to verify the request legal domain, admin session, Worker, and model link.
 9. Tap `刷新统计` to verify Worker usage, failure, invalid-key, and rate-limit stats.
 10. If the backend test fails on a phone, tap `复制诊断信息`. The copied text does
@@ -241,7 +241,7 @@ The preview command prints the exact QR and metadata paths after it succeeds.
 - [ ] Confirm the latest native LLM report restores after reopening the same
       birth profile and can be cleared locally.
 - [ ] Confirm the native LLM report can be copied and does not include backend or model secrets.
-- [ ] Re-test sharing from the home page, native page, and web-view page.
+- [ ] Re-test sharing from the native page and web-view page.
 - [ ] Re-test the native LLM generation path inside WeChat DevTools and on a
       phone.
 
@@ -249,7 +249,7 @@ The preview command prints the exact QR and metadata paths after it succeeds.
 
 Run this after scanning a preview QR or opening an experience version:
 
-- Home page opens and the three action buttons are aligned.
+- Mini Program opens directly to the native chart page.
 - Native chart page opens without horizontal scrolling.
 - Birth date, birth time, and gender changes refresh the local summary cards.
 - Birth date, birth time, and gender restore after reopening, and `重置出生信息`

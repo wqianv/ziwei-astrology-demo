@@ -17,7 +17,7 @@ function main() {
   checkProjectConfig(projectConfig);
   checkDomains(config);
   checkPages(appJson);
-  checkHomeEntry();
+  checkEntryPage(appJson, config);
   checkNativeFlow();
   checkSettingsFlow();
   checkWorkerFlow();
@@ -97,7 +97,6 @@ function checkDomains(config) {
 
 function checkPages(appJson) {
   const expectedPages = [
-    "pages/home/home",
     "pages/native/native",
     "pages/settings/settings",
     "pages/webview/webview",
@@ -118,38 +117,28 @@ function checkPages(appJson) {
   });
 }
 
-function checkHomeEntry() {
-  const homeJs = readText("miniprogram/pages/home/home.js");
-  const homeWxml = readText("miniprogram/pages/home/home.wxml");
-  const config = readText("miniprogram/config.js");
+function checkEntryPage(appJson, config) {
+  const nativeJs = readText("miniprogram/pages/native/native.js");
+  const nativeWxml = readText("miniprogram/pages/native/native.wxml");
 
   passIf(
-    homeWxml.includes("开始排盘") &&
-      homeWxml.includes("谈玄机") &&
-      !homeWxml.includes("设置与上线检查") &&
-      !homeWxml.includes("打开原生排盘"),
-    "Home page is a formal user entry instead of a development workbench",
-    "Home page should present the formal user entry and hide development wording",
+    Array.isArray(appJson.pages) && appJson.pages[0] === "pages/native/native",
+    "Native chart page is the Mini Program launch entry",
+    "app.json should launch directly into pages/native/native",
   );
   passIf(
-    !homeWxml.includes("bindlongpress=\"openSettings\"") &&
-      !homeJs.includes("openSettings") &&
-      homeWxml.includes("使用说明与边界") &&
-      !homeWxml.includes("小程序内生成") &&
-      !homeWxml.includes("传统文化参考"),
-    "Home page has no visible management entry and merges duplicate guide actions",
-    "Home page should hide admin entry and avoid duplicate guide/native actions",
+    config.SHARE_PATH === "/pages/native/native" &&
+      nativeJs.includes("openCompliance") &&
+      nativeWxml.includes("bindtap=\"openCompliance\"") &&
+      nativeWxml.includes("使用说明"),
+    "Native chart page owns share and bottom usage-guide entry",
+    "Native chart page should share itself and expose the usage guide at the bottom",
   );
   passIf(
-    homeWxml.includes("<ad-custom") &&
-      homeWxml.includes("<ad") &&
-      homeWxml.includes("binderror=\"handleAdError\"") &&
-      homeJs.includes("AD_CUSTOM_UNIT_ID") &&
-      homeJs.includes("AD_BANNER_UNIT_ID") &&
-      config.includes("AD_CUSTOM_UNIT_ID") &&
-      config.includes("AD_BANNER_UNIT_ID"),
-    "Home page supports native Mini Program ads with graceful no-ad handling",
-    "Home page should support configured WeChat ad/ad-custom units and hide failed ads",
+    nativeWxml.includes("紫微斗数 · 四柱八字") &&
+      !nativeWxml.includes("ziwei chart"),
+    "Native chart page uses the Chinese product category eyebrow",
+    "Native chart page should replace the English ziwei chart eyebrow",
   );
 }
 
@@ -286,7 +275,7 @@ function checkSettingsFlow() {
       complianceJs.includes("modelTitleTapCount < 7") &&
       complianceJs.includes("/pages/settings/settings?from=hidden-admin"),
     "Management backend is hidden behind seven taps on the compliance model heading",
-    "Management backend should not be visible from the home page and should use the hidden compliance trigger",
+    "Management backend should not be visible from the user entry and should use the hidden compliance trigger",
   );
   passIf(
     settingsJson.includes("管理后台") &&

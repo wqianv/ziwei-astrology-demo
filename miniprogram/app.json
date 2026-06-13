@@ -1,6 +1,5 @@
 {
   "pages": [
-    "pages/home/home",
     "pages/native/native",
     "pages/settings/settings",
     "pages/webview/webview",

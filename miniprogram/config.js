@@ -37,5 +37,5 @@ module.exports = {
   SITE_URL,
   WEBVIEW_DOMAIN: SITE_URL,
   SHARE_TITLE,
-  SHARE_PATH: "/pages/home/home",
+  SHARE_PATH: "/pages/native/native",
 };

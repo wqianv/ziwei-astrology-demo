@@ -1,6 +1,6 @@
 <view class="page">
   <view class="hero">
-    <view class="eyebrow">ziwei chart</view>
+    <view class="eyebrow">紫微斗数 · 四柱八字</view>
     <view class="title">谈玄机排盘</view>
     <view class="summary">出生信息、四柱摘要、紫微十二宫和命盘解读都在小程序内完成；网页版完整盘继续保留用于校验。</view>
   </view>
@@ -269,4 +269,5 @@
   </view>
 
   <button class="secondary web-entry" bindtap="openWebApp">查看网页版完整盘</button>
+  <button class="secondary guide-entry" bindtap="openCompliance">使用说明</button>
 </view>

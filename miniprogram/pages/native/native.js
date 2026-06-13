@@ -231,6 +231,12 @@ Page({
     });
   },
 
+  openCompliance() {
+    wx.navigateTo({
+      url: "/pages/compliance/compliance",
+    });
+  },
+
   toggleZiweiBoard() {
     this.setData({
       ziweiBoardExpanded: !this.data.ziweiBoardExpanded,

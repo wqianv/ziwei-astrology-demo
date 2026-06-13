@@ -42,6 +42,7 @@ Page({
     loggingIn: false,
     loginResult: "",
     loginResultType: "success",
+    loginDebug: "",
     testingBackend: false,
     backendTestResult: "",
     backendTestType: "success",
@@ -133,6 +134,9 @@ Page({
         });
       },
       fail: () => {
+        this.setData({
+          loginDebug: "wx.login failed",
+        });
         this.finishAdminLogin("微信登录失败，无法校验管理员微信身份。", "error");
       },
     });
@@ -189,6 +193,9 @@ Page({
         this.refreshAdminStats();
       },
       fail: (error) => {
+        this.setData({
+          loginDebug: error && error.errMsg ? error.errMsg : JSON.stringify(error || {}),
+        });
         this.finishAdminLogin(formatAdminLoginNetworkError(error), "error");
       },
     });
@@ -215,6 +222,7 @@ Page({
       statsMetaRows: [],
       loginResult: "已退出管理后台。",
       loginResultType: "success",
+      loginDebug: "",
     });
   },
 
@@ -415,6 +423,9 @@ Page({
       adminAuthenticated: this.data.adminAuthenticated,
       adminUsername: this.data.adminUsername,
       adminOpenidMasked: this.data.adminOpenidMasked,
+      loginResult: this.data.loginResult,
+      loginResultType: this.data.loginResultType,
+      loginDebug: this.data.loginDebug,
       backendTestResult: this.data.backendTestResult,
       backendTestType: this.data.backendTestType,
       statsResult: this.data.statsResult,
@@ -527,8 +538,16 @@ function formatAdminLoginNetworkError(error) {
     return "请求被微信拦截。请在小程序后台把 https://api.tanxj.xyz 配置为 request 合法域名。";
   }
 
+  if (message.includes("ERR_TUNNEL_CONNECTION_FAILED")) {
+    return "管理登录网络失败：当前微信请求被代理/VPN 隧道拦截。请关闭手机代理或切换网络后重试。";
+  }
+
   if (message.includes("timeout")) {
     return "管理登录超时。可以稍后再试。";
+  }
+
+  if (message) {
+    return `管理登录网络失败：${message}`;
   }
 
   return "管理登录失败。请确认网络正常，并且 Worker 已部署最新版本。";
@@ -558,6 +577,10 @@ function formatBackendNetworkError(error) {
 
   if (message.includes("url not in domain list")) {
     return "请求被微信拦截。请在小程序后台把 https://api.tanxj.xyz 配置为 request 合法域名。";
+  }
+
+  if (message.includes("ERR_TUNNEL_CONNECTION_FAILED")) {
+    return "后端连接测试失败：当前微信请求被代理/VPN 隧道拦截。请关闭手机代理或切换网络后重试。";
   }
 
   if (message.includes("timeout")) {
@@ -591,6 +614,10 @@ function formatStatsNetworkError(error) {
 
   if (message.includes("url not in domain list")) {
     return "请求被微信拦截。请在小程序后台把 https://api.tanxj.xyz 配置为 request 合法域名。";
+  }
+
+  if (message.includes("ERR_TUNNEL_CONNECTION_FAILED")) {
+    return "管理统计读取失败：当前微信请求被代理/VPN 隧道拦截。请关闭手机代理或切换网络后重试。";
   }
 
   if (message.includes("timeout")) {
@@ -731,6 +758,9 @@ function buildDiagnostics({
   adminAuthenticated,
   adminUsername,
   adminOpenidMasked,
+  loginResult,
+  loginResultType,
+  loginDebug,
   backendTestResult,
   backendTestType,
   statsResult,
@@ -750,6 +780,9 @@ function buildDiagnostics({
     `Admin authenticated: ${adminAuthenticated ? "yes" : "no"}`,
     `Admin username: ${adminUsername || "-"}`,
     `Admin openid: ${adminOpenidMasked || "-"}`,
+    `Admin login status: ${loginResultType || "not-run"}`,
+    `Admin login result: ${loginResult || "not run"}`,
+    `Admin login debug: ${loginDebug || "-"}`,
     `Backend test status: ${backendTestType || "not-run"}`,
     `Backend test result: ${backendTestResult || "not run"}`,
     `Stats result: ${statsResult || "not run"}`,
