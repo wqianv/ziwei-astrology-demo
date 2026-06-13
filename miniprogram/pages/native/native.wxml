@@ -64,8 +64,10 @@
     <view class="panel-heading">
       <view>
         <view class="panel-title">紫微十二宫</view>
-        <view class="panel-note">{{profile.ziwei.note}}</view>
       </view>
+      <button class="collapse-button" bindtap="toggleZiweiBoard">
+        {{ziweiBoardExpanded ? '收起' : '展开'}}
+      </button>
     </view>
 
     <view class="palace-focus">
@@ -81,102 +83,112 @@
       </view>
     </view>
 
-    <view class="chart-board">
-      <view
-        class="board-cell {{item.empty ? 'is-empty' : ''}} {{item.isSelected ? 'is-selected' : ''}} {{item.isMing ? 'is-ming' : ''}} {{item.isBody ? 'is-body' : ''}}"
-        wx:for="{{ziweiBoardCells}}"
-        wx:key="key"
-        data-name="{{item.name}}"
-        bindtap="selectPalace"
-      >
-        <block wx:if="{{!item.empty}}">
-          <view class="board-topline">
-            <text class="board-name">{{item.name}}</text>
-            <text class="board-branch">{{item.branch}}</text>
-          </view>
-          <view class="board-stars">{{item.boardStarText || item.majorStarsText}}</view>
-          <view class="board-tags">
-            <text wx:if="{{item.isMing}}" class="mini-tag">命</text>
-            <text wx:if="{{item.isBody}}" class="mini-tag muted">身</text>
-            <text class="board-decade">{{item.decadalText}}</text>
-          </view>
-        </block>
+    <block wx:if="{{ziweiBoardExpanded}}">
+      <view class="chart-board">
+        <view
+          class="board-cell {{item.empty ? 'is-empty' : ''}} {{item.isSelected ? 'is-selected' : ''}} {{item.isMing ? 'is-ming' : ''}} {{item.isBody ? 'is-body' : ''}}"
+          wx:for="{{ziweiBoardCells}}"
+          wx:key="key"
+          data-name="{{item.name}}"
+          bindtap="selectPalace"
+        >
+          <block wx:if="{{!item.empty}}">
+            <view class="board-topline">
+              <text class="board-name">{{item.name}}</text>
+              <text class="board-branch">{{item.branch}}</text>
+            </view>
+            <view class="board-stars">{{item.boardStarText || item.majorStarsText}}</view>
+            <view class="board-tags">
+              <text wx:if="{{item.isMing}}" class="mini-tag">命</text>
+              <text wx:if="{{item.isBody}}" class="mini-tag muted">身</text>
+              <text class="board-decade">{{item.decadalText}}</text>
+            </view>
+          </block>
+        </view>
+
+        <view class="board-center">
+          <view class="center-title">命盘</view>
+          <view class="center-line">{{profile.birth.lunar}}</view>
+          <view class="center-line">{{profile.ziwei.fiveElementsClass}}</view>
+          <view class="center-line">命主 {{profile.ziwei.soul}} · 身主 {{profile.ziwei.body}}</view>
+        </view>
       </view>
 
-      <view class="board-center">
-        <view class="center-title">命盘</view>
-        <view class="center-line">{{profile.birth.lunar}}</view>
-        <view class="center-line">{{profile.ziwei.fiveElementsClass}}</view>
-        <view class="center-line">命主 {{profile.ziwei.soul}} · 身主 {{profile.ziwei.body}}</view>
+      <view class="selected-palace">
+        <view class="selected-heading">
+          <view>
+            <view class="selected-title">{{selectedPalace.name}} · {{selectedPalace.branch}}</view>
+            <view class="selected-subtitle">{{selectedPalace.focus}}</view>
+          </view>
+          <view class="selected-tags">
+            <text wx:if="{{selectedPalace.isMing}}" class="tag">命宫</text>
+            <text wx:if="{{selectedPalace.isBody}}" class="tag muted">身宫</text>
+          </view>
+        </view>
+        <view class="selected-grid">
+          <view class="selected-item">
+            <view class="selected-label">主星</view>
+            <view class="selected-value">{{selectedPalace.majorStarsText}}</view>
+          </view>
+          <view class="selected-item">
+            <view class="selected-label">辅星</view>
+            <view class="selected-value">{{selectedPalace.minorStarsText}}</view>
+          </view>
+          <view class="selected-item">
+            <view class="selected-label">杂曜</view>
+            <view class="selected-value">{{selectedPalace.adjectiveStarsText}}</view>
+          </view>
+          <view class="selected-item">
+            <view class="selected-label">大限</view>
+            <view class="selected-value">{{selectedPalace.decadalText}}</view>
+          </view>
+        </view>
       </view>
+    </block>
+
+    <view class="subsection-heading">
+      <view class="subsection-title">十二宫明细</view>
+      <button class="collapse-button" bindtap="togglePalaceDetails">
+        {{palaceDetailsExpanded ? '收起' : '展开'}}
+      </button>
     </view>
 
-    <view class="selected-palace">
-      <view class="selected-heading">
-        <view>
-          <view class="selected-title">{{selectedPalace.name}} · {{selectedPalace.branch}}</view>
-          <view class="selected-subtitle">{{selectedPalace.focus}}</view>
-        </view>
-        <view class="selected-tags">
-          <text wx:if="{{selectedPalace.isMing}}" class="tag">命宫</text>
-          <text wx:if="{{selectedPalace.isBody}}" class="tag muted">身宫</text>
-        </view>
-      </view>
-      <view class="selected-grid">
-        <view class="selected-item">
-          <view class="selected-label">主星</view>
-          <view class="selected-value">{{selectedPalace.majorStarsText}}</view>
-        </view>
-        <view class="selected-item">
-          <view class="selected-label">辅星</view>
-          <view class="selected-value">{{selectedPalace.minorStarsText}}</view>
-        </view>
-        <view class="selected-item">
-          <view class="selected-label">杂曜</view>
-          <view class="selected-value">{{selectedPalace.adjectiveStarsText}}</view>
-        </view>
-        <view class="selected-item">
-          <view class="selected-label">大限</view>
-          <view class="selected-value">{{selectedPalace.decadalText}}</view>
-        </view>
-      </view>
-    </view>
+    <block wx:if="{{palaceDetailsExpanded}}">
+      <view class="subsection-note">命宫、身宫标记只是定位重点宫位，不代表吉凶判断。</view>
 
-    <view class="subsection-title">十二宫明细</view>
-    <view class="subsection-note">命宫、身宫标记只是定位重点宫位，不代表吉凶判断。</view>
-
-    <view class="palace-grid">
-      <view
-        class="palace-card {{item.isMing ? 'is-ming' : ''}} {{item.isBody ? 'is-body' : ''}}"
-        wx:for="{{ziweiPalaces}}"
-        wx:key="name"
-      >
-        <view class="palace-head">
-          <view class="palace-name">{{item.name}}</view>
-          <view class="palace-branch">{{item.branch}}</view>
-        </view>
-        <view class="palace-text">{{item.focus}}</view>
-        <view class="palace-stars">
-          <view class="star-row">
-            <text class="star-label">主星</text>
-            <text class="star-value">{{item.majorStarsText}}</text>
+      <view class="palace-grid">
+        <view
+          class="palace-card {{item.isMing ? 'is-ming' : ''}} {{item.isBody ? 'is-body' : ''}}"
+          wx:for="{{ziweiPalaces}}"
+          wx:key="name"
+        >
+          <view class="palace-head">
+            <view class="palace-name">{{item.name}}</view>
+            <view class="palace-branch">{{item.branch}}</view>
           </view>
-          <view class="star-row">
-            <text class="star-label">辅星</text>
-            <text class="star-value">{{item.minorStarsText}}</text>
+          <view class="palace-text">{{item.focus}}</view>
+          <view class="palace-stars">
+            <view class="star-row">
+              <text class="star-label">主星</text>
+              <text class="star-value">{{item.majorStarsText}}</text>
+            </view>
+            <view class="star-row">
+              <text class="star-label">辅星</text>
+              <text class="star-value">{{item.minorStarsText}}</text>
+            </view>
+            <view class="star-row">
+              <text class="star-label">大限</text>
+              <text class="star-value">{{item.decadalText}}</text>
+            </view>
           </view>
-          <view class="star-row">
-            <text class="star-label">大限</text>
-            <text class="star-value">{{item.decadalText}}</text>
+          <view class="palace-meta">
+            <text wx:if="{{item.isMing}}" class="tag">命宫</text>
+            <text wx:if="{{item.isBody}}" class="tag muted">身宫</text>
+            <text class="star-status">{{item.adjectiveStarsText}}</text>
           </view>
-        </view>
-        <view class="palace-meta">
-          <text wx:if="{{item.isMing}}" class="tag">命宫</text>
-          <text wx:if="{{item.isBody}}" class="tag muted">身宫</text>
-          <text class="star-status">{{item.adjectiveStarsText}}</text>
         </view>
       </view>
-    </view>
+    </block>
   </view>
 
   <view class="panel">
@@ -221,11 +233,12 @@
   </view>
 
   <view wx:if="{{loading}}" class="panel progress-panel">
-    <view class="panel-title">正在生成</view>
+    <view class="panel-title">后台生成中</view>
     <view class="progress-track">
       <view class="progress-bar"></view>
     </view>
     <view class="privacy">{{loadingTip}}</view>
+    <view wx:if="{{activeJobId}}" class="privacy">任务号：{{activeJobId}}</view>
   </view>
 
   <view wx:if="{{hasReport}}" class="panel report-panel">

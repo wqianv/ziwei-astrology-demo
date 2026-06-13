@@ -1,7 +1,8 @@
 const {
-  API_URL,
   BIRTH_PROFILE_STORAGE,
   LLM_CONSENT_STORAGE,
+  LLM_JOB_STORAGE,
+  LLM_JOB_URL,
   LLM_REPORT_STORAGE,
   PROXY_KEY_STORAGE,
   SHARE_TITLE,
@@ -35,6 +36,8 @@ Page({
     proxyKeySaved: false,
     llmConsentAccepted: false,
     canGenerate: false,
+    ziweiBoardExpanded: false,
+    palaceDetailsExpanded: false,
     loading: false,
     elapsedSeconds: 0,
     generateButtonText: "生成原生解读",
@@ -54,20 +57,29 @@ Page({
     matchedCount: 0,
     hasReport: false,
     cachedReportNotice: "",
+    activeJobId: "",
   },
 
   onLoad() {
     this.restoreBirthProfile();
     this.syncProxyAccessKey();
     this.refreshProfile();
+    this.resumeActiveReportJob();
   },
 
   onShow() {
     this.syncProxyAccessKey();
+    this.resumeActiveReportJob();
+  },
+
+  onHide() {
+    this.stopTimer();
+    this.stopJobPoller();
   },
 
   onUnload() {
     this.stopTimer();
+    this.stopJobPoller();
   },
 
   syncProxyAccessKey() {
@@ -221,6 +233,18 @@ Page({
     });
   },
 
+  toggleZiweiBoard() {
+    this.setData({
+      ziweiBoardExpanded: !this.data.ziweiBoardExpanded,
+    });
+  },
+
+  togglePalaceDetails() {
+    this.setData({
+      palaceDetailsExpanded: !this.data.palaceDetailsExpanded,
+    });
+  },
+
   generateReport() {
     const accessKey = this.data.proxyAccessKey.trim();
 
@@ -240,12 +264,13 @@ Page({
 
     const prompt = buildPrompt(this.data.profile);
     const reportCacheKey = buildReportCacheKey(this.data);
+    const startedAt = new Date().toISOString();
+    let jobAccepted = false;
 
-    this.startTimer();
     this.setData({
       loading: true,
       elapsedSeconds: 0,
-      generateButtonText: "LLM 生成中 0s",
+      generateButtonText: "提交后台任务",
       loadingTip: loadingTipFor(0),
       canGenerate: false,
       error: "",
@@ -256,12 +281,14 @@ Page({
       matchedCount: 0,
       cachedReportNotice: "",
       sections: emptyReportSections(),
+      activeJobId: "",
     });
+    this.startTimer();
 
     wx.request({
-      url: API_URL,
+      url: LLM_JOB_URL,
       method: "POST",
-      timeout: 120000,
+      timeout: 30000,
       header: {
         "Content-Type": "application/json",
         "X-Ziwei-Proxy-Key": accessKey,
@@ -278,48 +305,29 @@ Page({
         }
 
         const data = response.data || {};
-        const parsed = parseLLMReport(data.content || "");
-        const usage = data.usage || {};
-        const reportMeta = `${data.model || "llm"} · 后端代理`;
-        const usageText = usage.total_tokens
-          ? `tokens: ${usage.prompt_tokens || "-"} prompt / ${
-              usage.completion_tokens || "-"
-            } completion / ${usage.total_tokens} total`
-          : "";
-        const reportCache = {
-          key: reportCacheKey,
-          savedAt: new Date().toISOString(),
-          sections: parsed.sections,
-          reportMeta,
-          usageText,
-          matchedCount: parsed.matchedCount,
-        };
+        const jobId = String(data.jobId || "");
 
-        wx.setStorageSync(PROXY_KEY_STORAGE, accessKey);
-        saveReportCache(reportCache);
-        if (buildReportCacheKey(this.data) !== reportCacheKey) {
+        if (!jobId) {
           this.setData({
-            proxyKeySaved: true,
-            saveNotice: "出生信息已变化；本次解读已保存到原出生信息的本机缓存。",
+            error: "后端没有返回任务号，请确认 Worker 已部署最新版本。",
           });
           return;
         }
 
-        this.setData({
-          sections: parsed.sections,
-          reportMeta,
-          usageText,
-          matchedCount: parsed.matchedCount,
-          hasReport: true,
-          cachedReportNotice: "已保存到本机微信；下次打开相同出生信息会自动恢复。",
-          proxyKeySaved: true,
-          canGenerate: canGenerateReport({
-            accessKey,
-            consentAccepted: this.data.llmConsentAccepted,
-            loading: true,
-          }),
-          saveNotice: "已在本机微信保存后端访问密钥，下次打开会自动带出。",
+        jobAccepted = true;
+        wx.setStorageSync(PROXY_KEY_STORAGE, accessKey);
+        saveActiveReportJob({
+          jobId,
+          key: reportCacheKey,
+          startedAt,
         });
+        this.setData({
+          activeJobId: jobId,
+          proxyKeySaved: true,
+          saveNotice: "已提交后台生成；可以停留等待，也可以稍后回来查看。",
+          loadingTip: loadingTipFor(this.data.elapsedSeconds),
+        });
+        this.scheduleJobPoll(accessKey, reportCacheKey, jobId, 1200);
       },
       fail: (error) => {
         this.setData({
@@ -327,18 +335,181 @@ Page({
         });
       },
       complete: () => {
-        this.stopTimer();
-        this.setData({
-          loading: false,
-          canGenerate: canGenerateReport({
-            accessKey: this.data.proxyAccessKey,
-            consentAccepted: this.data.llmConsentAccepted,
-            loading: false,
-          }),
-          generateButtonText: "生成原生解读",
-        });
+        if (!jobAccepted) {
+          this.finishReportJob();
+        }
       },
     });
+  },
+
+  pollReportJob(accessKey, reportCacheKey, jobId) {
+    wx.request({
+      url: `${LLM_JOB_URL}/${encodeURIComponent(jobId)}`,
+      method: "GET",
+      timeout: 20000,
+      header: {
+        "X-Ziwei-Proxy-Key": accessKey,
+      },
+      success: (response) => {
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          this.finishReportJob(formatRequestError(response.statusCode, response.data));
+          return;
+        }
+
+        const data = response.data || {};
+
+        if (data.status === "done") {
+          this.applyReportData({
+            accessKey,
+            data,
+            reportCacheKey,
+            cachedReportNotice: "后台任务已完成，并保存到本机微信。",
+          });
+          return;
+        }
+
+        if (data.status === "error") {
+          this.finishReportJob(data.error || "后台生成失败，请稍后重试。");
+          return;
+        }
+
+        this.setData({
+          loadingTip: loadingTipFor(this.data.elapsedSeconds, data.status),
+        });
+        this.scheduleJobPoll(accessKey, reportCacheKey, jobId, pollDelayFor(this.data.elapsedSeconds));
+      },
+      fail: () => {
+        this.setData({
+          loadingTip: "本机暂时查不到后台结果；任务仍保存在后端，稍后会自动再查。",
+        });
+        this.scheduleJobPoll(accessKey, reportCacheKey, jobId, pollDelayFor(this.data.elapsedSeconds));
+      },
+    });
+  },
+
+  scheduleJobPoll(accessKey, reportCacheKey, jobId, delay) {
+    this.stopJobPoller();
+    this.pollTimer = setTimeout(() => {
+      this.pollReportJob(accessKey, reportCacheKey, jobId);
+    }, delay);
+  },
+
+  finishReportJob(errorMessage) {
+    clearActiveReportJob();
+    this.stopTimer();
+    this.stopJobPoller();
+    this.setData({
+      loading: false,
+      activeJobId: "",
+      error: errorMessage || this.data.error,
+      canGenerate: canGenerateReport({
+        accessKey: this.data.proxyAccessKey,
+        consentAccepted: this.data.llmConsentAccepted,
+        loading: false,
+      }),
+      generateButtonText: "生成原生解读",
+    });
+  },
+
+  applyReportData({ accessKey, data, reportCacheKey, cachedReportNotice }) {
+    const parsed = parseLLMReport(data.content || "");
+    const usage = data.usage || {};
+    const reportMeta = `${data.model || "llm"} · 后台生成`;
+    const usageText = usage.total_tokens
+      ? `tokens: ${usage.prompt_tokens || "-"} prompt / ${
+          usage.completion_tokens || "-"
+        } completion / ${usage.total_tokens} total`
+      : "";
+    const reportCache = {
+      key: reportCacheKey,
+      savedAt: new Date().toISOString(),
+      sections: parsed.sections,
+      reportMeta,
+      usageText,
+      matchedCount: parsed.matchedCount,
+    };
+
+    wx.setStorageSync(PROXY_KEY_STORAGE, accessKey);
+    saveReportCache(reportCache);
+    clearActiveReportJob();
+    this.stopTimer();
+    this.stopJobPoller();
+
+    if (buildReportCacheKey(this.data) !== reportCacheKey) {
+      this.setData({
+        loading: false,
+        activeJobId: "",
+        proxyKeySaved: true,
+        generateButtonText: "生成原生解读",
+        canGenerate: canGenerateReport({
+          accessKey,
+          consentAccepted: this.data.llmConsentAccepted,
+          loading: false,
+        }),
+        saveNotice: "出生信息已变化；本次解读已保存到原出生信息的本机缓存。",
+      });
+      return;
+    }
+
+    this.setData({
+      sections: parsed.sections,
+      reportMeta,
+      usageText,
+      matchedCount: parsed.matchedCount,
+      hasReport: true,
+      cachedReportNotice,
+      proxyKeySaved: true,
+      loading: false,
+      activeJobId: "",
+      canGenerate: canGenerateReport({
+        accessKey,
+        consentAccepted: this.data.llmConsentAccepted,
+        loading: false,
+      }),
+      generateButtonText: "生成原生解读",
+      saveNotice: "已在本机微信保存后端访问密钥，下次打开会自动带出。",
+    });
+  },
+
+  resumeActiveReportJob() {
+    const activeJob = readActiveReportJob();
+    const accessKey = this.data.proxyAccessKey.trim();
+
+    if (
+      !activeJob ||
+      !activeJob.jobId ||
+      activeJob.key !== buildReportCacheKey(this.data) ||
+      this.data.loading
+    ) {
+      return;
+    }
+
+    if (this.data.hasReport) {
+      clearActiveReportJob();
+      return;
+    }
+
+    if (!accessKey) {
+      this.setData({
+        saveNotice: "有一个后台任务还没取回；保存后端访问密钥后会继续查询。",
+      });
+      return;
+    }
+
+    const elapsedSeconds = elapsedSecondsSince(activeJob.startedAt);
+
+    this.setData({
+      loading: true,
+      elapsedSeconds,
+      generateButtonText: `后台生成中 ${elapsedSeconds}s`,
+      loadingTip: loadingTipFor(elapsedSeconds),
+      canGenerate: false,
+      error: "",
+      activeJobId: activeJob.jobId,
+      saveNotice: "已恢复后台任务，正在查询结果。",
+    });
+    this.startTimer();
+    this.scheduleJobPoll(accessKey, activeJob.key, activeJob.jobId, 300);
   },
 
   refreshProfile() {
@@ -445,7 +616,7 @@ Page({
       const nextElapsedSeconds = this.data.elapsedSeconds + 1;
       this.setData({
         elapsedSeconds: nextElapsedSeconds,
-        generateButtonText: `LLM 生成中 ${nextElapsedSeconds}s`,
+        generateButtonText: `后台生成中 ${nextElapsedSeconds}s`,
         loadingTip: loadingTipFor(nextElapsedSeconds),
       });
     }, 1000);
@@ -455,6 +626,13 @@ Page({
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = undefined;
+    }
+  },
+
+  stopJobPoller() {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = undefined;
     }
   },
 
@@ -565,6 +743,40 @@ function readReportCache(key) {
   return cached;
 }
 
+function saveActiveReportJob(job) {
+  wx.setStorageSync(LLM_JOB_STORAGE, {
+    jobId: job.jobId,
+    key: job.key,
+    startedAt: job.startedAt,
+  });
+}
+
+function readActiveReportJob() {
+  const job = wx.getStorageSync(LLM_JOB_STORAGE);
+
+  if (!job || typeof job !== "object") {
+    return null;
+  }
+
+  const jobId = String(job.jobId || "");
+  const key = String(job.key || "");
+  const startedAt = String(job.startedAt || "");
+
+  if (!jobId || !key) {
+    return null;
+  }
+
+  return {
+    jobId,
+    key,
+    startedAt,
+  };
+}
+
+function clearActiveReportJob() {
+  wx.removeStorageSync(LLM_JOB_STORAGE);
+}
+
 function formatSavedAt(value) {
   if (!value) {
     return "本机缓存";
@@ -610,20 +822,50 @@ function canGenerateReport({ accessKey, consentAccepted, loading }) {
   return Boolean(String(accessKey || "").trim()) && Boolean(consentAccepted) && !loading;
 }
 
-function loadingTipFor(seconds) {
+function loadingTipFor(seconds, status) {
+  if (status === "queued") {
+    return "任务已提交到后端队列；可以稍后回来查看。";
+  }
+
+  if (status === "running") {
+    return "后端正在生成解读；关闭页面也不会取消这次任务。";
+  }
+
   if (seconds < 8) {
-    return "正在整理出生信息与命盘摘要。";
+    return "正在把命盘摘要提交到后端任务。";
   }
 
   if (seconds < 25) {
-    return "正在请求 DeepSeek Pro，通常需要多等一会儿。";
+    return "任务已交给后端，页面可以离开，回来会继续取结果。";
   }
 
   if (seconds < 55) {
-    return "模型还在生成分项解读，请保持页面打开。";
+    return "DeepSeek Pro 仍在生成分项解读；本机会自动轮询结果。";
   }
 
-  return "这次请求偏慢；如果超过 2 分钟，可以稍后重试。";
+  return "这次偏慢也没关系；后台任务完成后会保存到本机微信。";
+}
+
+function pollDelayFor(seconds) {
+  if (seconds < 20) {
+    return 2500;
+  }
+
+  if (seconds < 60) {
+    return 4000;
+  }
+
+  return 7000;
+}
+
+function elapsedSecondsSince(value) {
+  const startedAt = Date.parse(value);
+
+  if (!Number.isFinite(startedAt)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
 }
 
 function formatRequestError(statusCode, data) {
@@ -640,6 +882,10 @@ function formatRequestError(statusCode, data) {
 
   if (statusCode === 400 && rawError.includes("Missing prompt")) {
     return "请求内容为空。请返回修改出生信息后再重新生成。";
+  }
+
+  if (statusCode === 404 && rawError.includes("Job not found")) {
+    return "后台任务已过期或不存在，请重新生成一次。";
   }
 
   if (statusCode === 413) {
@@ -661,7 +907,7 @@ function formatNetworkError(error) {
   }
 
   if (message.includes("timeout")) {
-    return "请求超时。DeepSeek Pro 有时较慢，可以稍后重试。";
+    return "本机查询超时。后台任务可能仍在继续，可以稍后回到页面查看。";
   }
 
   return "网络请求失败。请确认手机网络正常，并且 api.tanxj.xyz 已配置为 request 合法域名。";

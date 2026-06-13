@@ -61,6 +61,7 @@ function printReleaseSummary() {
   console.log(`Request legal domain: ${config.REQUEST_DOMAIN}`);
   console.log(`Web-view business domain: ${config.WEBVIEW_DOMAIN}`);
   console.log(`LLM endpoint: ${config.API_URL}`);
+  console.log(`LLM job endpoint: ${config.LLM_JOB_URL}`);
   console.log(`Mini Program source package: ${formatBytes(packageSize)}`);
 
   console.log("\nManual gates still required before review/upload:");
@@ -72,7 +73,7 @@ function printReleaseSummary() {
     "Copy diagnostics from the settings page if the backend connectivity test fails.",
     "Confirm the settings page can clear all local Mini Program data.",
     "Confirm birth date, birth time, and gender restore after reopening and can be reset locally.",
-    "Generate one native LLM report with the backend access key saved locally.",
+    "Generate one native background LLM report with the backend access key saved locally.",
     "Confirm the native LLM report restores for the same birth profile and can be cleared locally.",
     "Confirm the native LLM report copy action excludes the backend access key.",
     "Upload only with npm run mini:upload -- --version <version> --desc <description> --confirm-upload.",

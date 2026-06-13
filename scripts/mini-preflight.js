@@ -72,6 +72,11 @@ function checkDomains(config) {
     "API_URL should be REQUEST_DOMAIN + /api/llm/interpret",
   );
   passIf(
+    config.LLM_JOB_URL === `${config.REQUEST_DOMAIN}/api/llm/jobs`,
+    `LLM job URL is aligned: ${config.LLM_JOB_URL}`,
+    "LLM_JOB_URL should be REQUEST_DOMAIN + /api/llm/jobs",
+  );
+  passIf(
     config.WEBVIEW_DOMAIN === config.SITE_URL,
     "WEBVIEW_DOMAIN matches SITE_URL",
     "WEBVIEW_DOMAIN should match SITE_URL",
@@ -124,6 +129,21 @@ function checkNativeFlow() {
     "Native Ziwei board or selected palace details are missing",
   );
   passIf(
+    nativeJs.includes("ziweiBoardExpanded: false") &&
+      nativeJs.includes("palaceDetailsExpanded: false") &&
+      nativeJs.includes("toggleZiweiBoard") &&
+      nativeJs.includes("togglePalaceDetails") &&
+      nativeWxml.includes("wx:if=\"{{ziweiBoardExpanded}}\"") &&
+      nativeWxml.includes("wx:if=\"{{palaceDetailsExpanded}}\""),
+    "Native Ziwei board and palace details are collapsible by default",
+    "Native Ziwei board and palace details should be collapsible and default collapsed",
+  );
+  passIf(
+    !nativeWxml.includes("原生版已接入 iztro 生成紫微十二宫"),
+    "Native Ziwei panel no longer shows engineering implementation copy",
+    "Native Ziwei panel should not show the old implementation-detail description",
+  );
+  passIf(
     nativeJs.includes("buildSummaryRows") &&
       nativeJs.includes("left: summaryCards[index]") &&
       nativeJs.includes("right: summaryCards[index + 1]") &&
@@ -144,12 +164,16 @@ function checkNativeFlow() {
   );
   passIf(
     nativeJs.includes("LLM_REPORT_STORAGE") &&
+      nativeJs.includes("LLM_JOB_STORAGE") &&
+      nativeJs.includes("LLM_JOB_URL") &&
+      nativeJs.includes("pollReportJob") &&
+      nativeJs.includes("resumeActiveReportJob") &&
       nativeJs.includes("saveReportCache") &&
       nativeJs.includes("readReportCache") &&
       nativeJs.includes("clearCachedReport") &&
       nativeWxml.includes("清除本机解读"),
-    "Native LLM report is cached locally and can be cleared",
-    "Native LLM report should be saved locally and offer a clear action",
+    "Native LLM report uses background jobs, caches locally, and can be cleared",
+    "Native LLM report should use background jobs, save locally, and offer a clear action",
   );
   passIf(
     nativeJs.includes("copyReport") &&
@@ -201,6 +225,7 @@ function checkSettingsFlow() {
     settingsJs.includes("clearLocalData") &&
       settingsJs.includes("BIRTH_PROFILE_STORAGE") &&
       settingsJs.includes("LLM_CONSENT_STORAGE") &&
+      settingsJs.includes("LLM_JOB_STORAGE") &&
       settingsJs.includes("LLM_REPORT_STORAGE") &&
       settingsWxml.includes("清除本机数据"),
     "Settings page can clear locally stored Mini Program data",

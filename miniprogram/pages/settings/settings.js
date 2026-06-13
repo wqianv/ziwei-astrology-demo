@@ -2,6 +2,8 @@ const {
   API_URL,
   BIRTH_PROFILE_STORAGE,
   LLM_CONSENT_STORAGE,
+  LLM_JOB_STORAGE,
+  LLM_JOB_URL,
   LLM_REPORT_STORAGE,
   PROXY_KEY_STORAGE,
   REQUEST_DOMAIN,
@@ -13,6 +15,7 @@ const {
 Page({
   data: {
     apiUrl: API_URL,
+    llmJobUrl: LLM_JOB_URL,
     requestDomain: REQUEST_DOMAIN,
     webviewDomain: WEBVIEW_DOMAIN,
     proxyAccessKey: "",
@@ -102,6 +105,7 @@ Page({
           PROXY_KEY_STORAGE,
           BIRTH_PROFILE_STORAGE,
           LLM_CONSENT_STORAGE,
+          LLM_JOB_STORAGE,
           LLM_REPORT_STORAGE,
         ].forEach((key) => {
           wx.removeStorageSync(key);
@@ -286,6 +290,7 @@ function buildDiagnostics({
     `Request domain: ${REQUEST_DOMAIN}`,
     `Web-view domain: ${WEBVIEW_DOMAIN}`,
     `LLM endpoint: ${API_URL}`,
+    `LLM job endpoint: ${LLM_JOB_URL}`,
     `Backend key status: ${keyStatus}`,
     `Backend test status: ${backendTestType || "not-run"}`,
     `Backend test result: ${backendTestResult || "not run"}`,

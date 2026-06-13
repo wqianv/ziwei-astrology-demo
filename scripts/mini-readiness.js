@@ -32,9 +32,10 @@ function main() {
       evidence: "pages/webview/webview -> web-view",
     },
     {
-      label: "Request domain and LLM endpoint are aligned",
-      passed: config.API_URL === `${config.REQUEST_DOMAIN}/api/llm/interpret`,
-      evidence: config.API_URL,
+      label: "Request domain and LLM endpoints are aligned",
+      passed: config.API_URL === `${config.REQUEST_DOMAIN}/api/llm/interpret` &&
+        config.LLM_JOB_URL === `${config.REQUEST_DOMAIN}/api/llm/jobs`,
+      evidence: `${config.API_URL}, ${config.LLM_JOB_URL}`,
     },
     {
       label: "H5 domain is configured for the web-view path",

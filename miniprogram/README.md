@@ -77,8 +77,10 @@ without opening the H5 app:
    flag is saved in local WeChat storage.
 5. Backend access key managed on the settings page and saved in local WeChat
    storage.
-6. `wx.request` to `https://api.tanxj.xyz/api/llm/interpret`.
-7. Progress and error states for slow or blocked LLM requests.
+6. Background LLM job submission through
+   `https://api.tanxj.xyz/api/llm/jobs`, with local polling and restore after
+   returning to the page.
+7. Progress and error states for slow, queued, or blocked LLM jobs.
 8. Sectioned LLM report display.
 9. Latest LLM report cached in local WeChat storage for the same birth profile,
    with a clear action on the native page. The cache does not store the backend
@@ -189,9 +191,10 @@ As of 2026-06-12 on `main`:
 - GitHub Actions workflow `Build demo and mini program` passed for `main`.
 - `PHONE_QA.md` is available as the real-device QA record template.
 - `https://www.tanxj.xyz/` resolves through Cloudflare and returns HTTPS 200.
-- `https://api.tanxj.xyz/api/llm/interpret` resolves through Cloudflare and
-  returns HTTP 401 without `X-Ziwei-Proxy-Key`, which confirms the Worker route
-  is reachable and key-protected.
+- `https://api.tanxj.xyz/api/llm/interpret` and
+  `https://api.tanxj.xyz/api/llm/jobs` resolve through Cloudflare and return
+  HTTP 401 without `X-Ziwei-Proxy-Key`, which confirms the Worker routes are
+  reachable and key-protected.
 
 The latest local preview QR is written under:
 

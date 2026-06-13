@@ -56,6 +56,29 @@
   min-width: 0;
 }
 
+.collapse-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 104rpx;
+  height: 56rpx;
+  margin: 0;
+  border: 1rpx solid rgba(42, 111, 95, 0.18);
+  border-radius: 999rpx;
+  padding: 0 18rpx;
+  background: #f8faf7;
+  color: #2a6f5f;
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.collapse-button::after {
+  border: 0;
+}
+
 .panel-title {
   color: #1f2a25;
   font-size: 30rpx;
@@ -206,7 +229,7 @@
 }
 
 .ziwei-panel > .panel-heading,
-.ziwei-panel > .subsection-title {
+.ziwei-panel > .subsection-heading {
   padding: 0 6rpx;
 }
 
@@ -478,11 +501,18 @@
 }
 
 .subsection-title {
-  margin-top: 24rpx;
   color: #1f2a25;
   font-size: 28rpx;
   font-weight: 800;
   line-height: 1.35;
+}
+
+.subsection-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 24rpx;
 }
 
 .subsection-note {

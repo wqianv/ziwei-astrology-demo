@@ -8,6 +8,25 @@
     "LLM_BASE_URL": "https://api.deepseek.com",
     "LLM_MODEL": "deepseek-v4-pro"
   },
+  "kv_namespaces": [
+    {
+      "binding": "LLM_JOBS",
+      "id": "ac192f4dc78b415097fb2e0c9fea778c"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "LLM_JOB_QUEUE",
+        "queue": "ziwei-llm-jobs"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "ziwei-llm-jobs"
+      }
+    ]
+  },
   "routes": [
     {
       "pattern": "api.tanxj.xyz",

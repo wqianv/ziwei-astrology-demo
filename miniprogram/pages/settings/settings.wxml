@@ -63,6 +63,14 @@
       </view>
       <button class="copy-button" data-value="{{apiUrl}}" bindtap="copyValue">复制</button>
     </view>
+
+    <view class="domain-row">
+      <view class="domain-main">
+        <view class="domain-title">LLM 后台任务接口</view>
+        <view class="domain-value">{{llmJobUrl}}</view>
+      </view>
+      <button class="copy-button" data-value="{{llmJobUrl}}" bindtap="copyValue">复制</button>
+    </view>
   </view>
 
   <view class="panel">
