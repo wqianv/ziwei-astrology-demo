@@ -800,6 +800,37 @@
   animation: progressPulse 1.4s ease-in-out infinite alternate;
 }
 
+.job-signature-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 14rpx;
+  color: #5d6d66;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.job-signature-label {
+  flex: 0 0 auto;
+  border: 1rpx solid rgba(159, 123, 47, 0.24);
+  border-radius: 999rpx;
+  padding: 4rpx 12rpx;
+  color: #8b6b2a;
+  font-size: 21rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.job-signature-value {
+  min-width: 0;
+  color: #31423b;
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
 .report-header {
   align-items: flex-start;
 }

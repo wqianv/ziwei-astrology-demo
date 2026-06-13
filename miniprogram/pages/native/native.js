@@ -22,6 +22,11 @@ const DEFAULT_BIRTH_PROFILE = {
   genderIndex: 0,
 };
 const REPORT_HISTORY_LIMIT = 8;
+const HEAVENLY_STEMS = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
+const EARTHLY_BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+const JIAZI_CYCLE = Array.from({ length: 60 }, (_, index) =>
+  `${HEAVENLY_STEMS[index % 10]}${EARTHLY_BRANCHES[index % 12]}`,
+);
 
 Page({
   data: {
@@ -60,6 +65,7 @@ Page({
     hasReport: false,
     cachedReportNotice: "",
     activeJobId: "",
+    activeJobSignature: "",
   },
 
   onLoad() {
@@ -290,6 +296,7 @@ Page({
       cachedReportNotice: "",
       sections: emptyReportSections(),
       activeJobId: "",
+      activeJobSignature: "",
     });
     this.startTimer();
 
@@ -333,6 +340,7 @@ Page({
         });
         this.setData({
           activeJobId: jobId,
+          activeJobSignature: buildJobSignature(jobId),
           proxyKeySaved: true,
           saveNotice: "已提交后台生成；可以停留等待，也可以稍后回来查看。",
           loadingTip: loadingTipFor(this.data.elapsedSeconds),
@@ -416,6 +424,7 @@ Page({
     this.setData({
       loading: false,
       activeJobId: "",
+      activeJobSignature: "",
       error: errorMessage || this.data.error,
       canGenerate: canGenerateReport({
         accessKey: this.data.proxyAccessKey,
@@ -457,6 +466,7 @@ Page({
       this.setData({
         loading: false,
         activeJobId: "",
+        activeJobSignature: "",
         proxyKeySaved: true,
         generateButtonText: "生成原生解读",
         canGenerate: canGenerateReport({
@@ -479,6 +489,7 @@ Page({
       proxyKeySaved: true,
       loading: false,
       activeJobId: "",
+      activeJobSignature: "",
       queryDate,
       canGenerate: canGenerateReport({
         accessKey,
@@ -527,6 +538,7 @@ Page({
       canGenerate: false,
       error: "",
       activeJobId: activeJob.jobId,
+      activeJobSignature: buildJobSignature(activeJob.jobId),
       saveNotice: "已恢复后台任务，正在查询结果。",
     });
     this.startTimer();
@@ -857,6 +869,22 @@ function readActiveReportJob() {
 
 function clearActiveReportJob() {
   wx.removeStorageSync(LLM_JOB_STORAGE);
+}
+
+function buildJobSignature(jobId) {
+  const compactId = String(jobId || "").replace(/[^a-f0-9]/gi, "").toLowerCase();
+  const shortCode = compactId.slice(0, 8);
+
+  if (!shortCode) {
+    return "";
+  }
+
+  const pairs = shortCode.match(/.{1,2}/g) || [];
+  const cycleText = pairs.map((pair) =>
+    JIAZI_CYCLE[(parseInt(pair.padEnd(2, "0"), 16) || 0) % JIAZI_CYCLE.length],
+  ).join(" · ");
+
+  return `${cycleText} / 码 ${shortCode.slice(0, 4)}`;
 }
 
 function formatSavedAt(value) {

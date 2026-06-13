@@ -243,7 +243,10 @@
       <view class="progress-bar"></view>
     </view>
     <view class="privacy">{{loadingTip}}</view>
-    <view wx:if="{{activeJobId}}" class="privacy">任务号：{{activeJobId}}</view>
+    <view wx:if="{{activeJobSignature}}" class="job-signature-row">
+      <text class="job-signature-label">任务签</text>
+      <text class="job-signature-value">{{activeJobSignature}}</text>
+    </view>
   </view>
 
   <view wx:if="{{hasReport}}" class="panel report-panel">

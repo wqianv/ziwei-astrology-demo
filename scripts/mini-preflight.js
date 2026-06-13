@@ -189,6 +189,15 @@ function checkNativeFlow() {
     "Native LLM report should use background jobs, date-keyed history, and offer a clear action",
   );
   passIf(
+    nativeJs.includes("buildJobSignature") &&
+      nativeJs.includes("JIAZI_CYCLE") &&
+      nativeJs.includes("activeJobSignature") &&
+      nativeWxml.includes("任务签") &&
+      !nativeWxml.includes("任务号：{{activeJobId}}"),
+    "Native background job uses a restrained ganzhi signature instead of showing the full job id",
+    "Native background job should not expose the full job id in the UI",
+  );
+  passIf(
     nativeJs.includes("copyReport") &&
       nativeJs.includes("buildReportCopyText") &&
       nativeWxml.includes("复制解读") &&
