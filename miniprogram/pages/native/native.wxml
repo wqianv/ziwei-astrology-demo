@@ -9,7 +9,6 @@
     <view class="panel-heading">
       <view>
         <view class="panel-title">出生信息</view>
-        <view class="panel-note">先定生辰，排盘摘要会在本机整理；点生成解读时才提交必要内容。</view>
       </view>
     </view>
 
@@ -195,7 +194,7 @@
     <view class="panel-heading report-header">
       <view>
         <view class="panel-title">命盘解读</view>
-        <view class="panel-note">生成时会以当前命盘摘要起稿；访问密钥只保存在本机微信。</view>
+        <view class="panel-note">按当前命盘生成，密钥仅存本机。</view>
       </view>
       <button class="text-button" bindtap="openSettings">
         {{proxyKeySaved ? '更换密钥' : '设置密钥'}}
