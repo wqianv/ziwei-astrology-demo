@@ -169,7 +169,7 @@ function checkNativeFlow() {
       nativeJs.includes("currentQueryDate") &&
       nativeJs.includes("buildBirthCacheKey") &&
       nativeJs.includes("|query:") &&
-      nativeWxml.includes("本次查询日期"),
+      nativeWxml.includes("问询日期"),
     "Native LLM prompt and cache are associated with a query date",
     "Native LLM reports should be keyed by birth profile plus query date",
   );

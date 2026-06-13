@@ -169,7 +169,7 @@ Page({
   clearBirthProfile() {
     wx.showModal({
       title: "重置出生信息",
-      content: "会清除本机保存的生日、时辰和性别，并恢复为默认示例；不会清除后端访问密钥和已保存解读。",
+      content: "会清除本机保存的生日、时辰和性别，并恢复为默认示例；不会清除访问密钥和已保存解读。",
       confirmText: "重置",
       success: (result) => {
         if (!result.confirm) {
@@ -258,14 +258,14 @@ Page({
 
     if (!accessKey) {
       this.setData({
-        error: "请先到设置页保存后端访问密钥。密钥只保存在本机微信里。",
+        error: "请先到设置页保存访问密钥。密钥只保存在本机微信里。",
       });
       return;
     }
 
     if (!this.data.llmConsentAccepted) {
       this.setData({
-        error: "请先勾选发送确认。生成解读时会把当前出生信息和命盘摘要发送到后端。",
+        error: "请先勾选生成确认。生成解读时会使用当前出生信息和命盘摘要。",
       });
       return;
     }
@@ -324,7 +324,7 @@ Page({
 
         if (!jobId) {
           this.setData({
-            error: "后端没有返回任务号，请确认 Worker 已部署最新版本。",
+            error: "生成服务没有返回任务签，请稍后再试。",
           });
           return;
         }
@@ -386,7 +386,7 @@ Page({
               queryDate,
             },
             reportCacheKey,
-            cachedReportNotice: `已保存到本机微信，关联查询日期 ${queryDate}。`,
+            cachedReportNotice: `已保存到本机微信，关联问询日期 ${queryDate}。`,
           });
           return;
         }
@@ -403,7 +403,7 @@ Page({
       },
       fail: () => {
         this.setData({
-          loadingTip: "本机暂时查不到后台结果；任务仍保存在后端，稍后会自动再查。",
+          loadingTip: "本机暂时查不到结果；任务仍在生成服务中，稍后会自动再查。",
         });
         this.scheduleJobPoll(accessKey, reportCacheKey, jobId, pollDelayFor(this.data.elapsedSeconds));
       },
@@ -497,7 +497,7 @@ Page({
         loading: false,
       }),
       generateButtonText: "生成原生解读",
-      saveNotice: "已在本机微信保存后端访问密钥，下次打开会自动带出。",
+      saveNotice: "已在本机微信保存访问密钥，下次打开会自动带出。",
     });
   },
 
@@ -522,7 +522,7 @@ Page({
 
     if (!accessKey) {
       this.setData({
-        saveNotice: "有一个后台任务还没取回；保存后端访问密钥后会继续查询。",
+        saveNotice: "有一份解读还没取回；保存访问密钥后会继续查询。",
       });
       return;
     }
@@ -605,7 +605,7 @@ Page({
   clearCachedReport() {
     wx.showModal({
       title: "清除本机解读",
-      content: "会清除当前小程序本机保存的解读历史，不会清除后端访问密钥。",
+      content: "会清除当前小程序本机保存的解读历史，不会清除访问密钥。",
       confirmText: "清除",
       success: (result) => {
         if (!result.confirm) {
@@ -925,7 +925,7 @@ function buildReportCopyText(data) {
     .join("\n\n");
 
   return [
-    "命理排盘工作台 - LLM 解读",
+    "命理排盘工作台 - 命盘解读",
     `出生日期：${data.birthDate}`,
     `出生时辰：${data.birthTimeText}`,
     `性别：${genderOption.label}`,
@@ -956,19 +956,19 @@ function canGenerateReport({ accessKey, consentAccepted, loading }) {
 
 function loadingTipFor(seconds, status) {
   if (status === "queued") {
-    return "任务已提交到后端队列；可以稍后回来查看。";
+    return "解读已入队；可以稍后回来查看。";
   }
 
   if (status === "running") {
-    return "后端正在生成解读；关闭页面也不会取消这次任务。";
+    return "正在生成解读；关闭页面也不会取消这次任务。";
   }
 
   if (seconds < 8) {
-    return "正在把命盘摘要提交到后端任务。";
+    return "正在整理命盘摘要并提交生成。";
   }
 
   if (seconds < 25) {
-    return "任务已交给后端，页面可以离开，回来会继续取结果。";
+    return "解读已提交，页面可以离开，回来会继续取结果。";
   }
 
   if (seconds < 55) {
@@ -1002,14 +1002,14 @@ function elapsedSecondsSince(value) {
 
 function formatRequestError(statusCode, data) {
   const rawError =
-    data && typeof data.error === "string" ? data.error : "后端没有返回明确错误";
+    data && typeof data.error === "string" ? data.error : "生成服务没有返回明确错误";
 
   if (statusCode === 401) {
-    return "后端访问密钥不正确。请到设置页重新保存密钥后再试。";
+    return "访问密钥不正确。请到设置页重新保存后再试。";
   }
 
   if (statusCode === 403) {
-    return "后端拒绝了这次请求。请检查 Worker 允许来源配置，或确认当前环境是小程序 request。";
+    return "生成服务拒绝了这次请求。请检查访问配置后再试。";
   }
 
   if (statusCode === 400 && rawError.includes("Missing prompt")) {
@@ -1021,14 +1021,14 @@ function formatRequestError(statusCode, data) {
   }
 
   if (statusCode === 413) {
-    return "本次解读内容过长，后端已拒绝。可以减少附加信息后重试。";
+    return "本次解读内容过长，生成服务已拒绝。可以减少附加信息后重试。";
   }
 
   if (statusCode >= 500) {
-    return `后端或模型服务暂时异常（${statusCode}）：${rawError}`;
+    return `生成服务暂时异常（${statusCode}）：${rawError}`;
   }
 
-  return `LLM 请求失败（${statusCode}）：${rawError}`;
+  return `生成请求失败（${statusCode}）：${rawError}`;
 }
 
 function formatNetworkError(error) {
