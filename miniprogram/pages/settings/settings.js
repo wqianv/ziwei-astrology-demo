@@ -1,6 +1,9 @@
 const {
   AD_BANNER_UNIT_ID,
   AD_CUSTOM_UNIT_ID,
+  ADMIN_LLM_TEST_URL,
+  ADMIN_LOGIN_URL,
+  ADMIN_SESSION_STORAGE,
   ADMIN_STATS_URL,
   API_URL,
   BIRTH_PROFILE_STORAGE,
@@ -20,6 +23,8 @@ const {
 Page({
   data: {
     apiUrl: API_URL,
+    adminLoginUrl: ADMIN_LOGIN_URL,
+    adminLlmTestUrl: ADMIN_LLM_TEST_URL,
     adminStatsUrl: ADMIN_STATS_URL,
     publicLlmJobUrl: PUBLIC_LLM_JOB_URL,
     llmJobUrl: LLM_JOB_URL,
@@ -28,10 +33,15 @@ Page({
     adBannerUnitId: AD_BANNER_UNIT_ID,
     adCustomUnitId: AD_CUSTOM_UNIT_ID,
     adStatusText: adStatusText(),
-    proxyAccessKey: "",
-    proxyKeySaved: false,
-    notice: "",
-    noticeType: "success",
+    adminAuthenticated: false,
+    adminUsername: "",
+    adminPassword: "",
+    adminSessionToken: "",
+    adminSessionExpiresAt: "",
+    adminOpenidMasked: "",
+    loggingIn: false,
+    loginResult: "",
+    loginResultType: "success",
     testingBackend: false,
     backendTestResult: "",
     backendTestType: "success",
@@ -42,84 +52,176 @@ Page({
     statsMetaRows: [],
   },
 
+  onLoad() {
+    this.restoreAdminSession();
+  },
+
   onShow() {
-    const savedProxyAccessKey = wx.getStorageSync(PROXY_KEY_STORAGE) || "";
-
-    this.setData({
-      proxyAccessKey: savedProxyAccessKey,
-      proxyKeySaved: Boolean(savedProxyAccessKey.trim()),
-      notice: savedProxyAccessKey ? "已读取本机保存的后端访问密钥。" : "",
-      noticeType: "success",
-      backendTestResult: "",
-    });
-
-    if (savedProxyAccessKey) {
-      this.refreshAdminStats();
-    }
+    this.restoreAdminSession();
   },
 
-  handleProxyKeyInput(event) {
-    this.setData({
-      proxyAccessKey: event.detail.value,
-      proxyKeySaved: false,
-      notice: "",
-      backendTestResult: "",
-      statsResult: "",
-    });
-  },
+  restoreAdminSession() {
+    const session = readAdminSession();
 
-  saveProxyKey() {
-    const accessKey = this.data.proxyAccessKey.trim();
-
-    if (!accessKey) {
+    if (!session) {
       this.setData({
-        notice: "请输入后端访问密钥。",
-        noticeType: "warning",
+        adminAuthenticated: false,
+        adminSessionToken: "",
+        adminSessionExpiresAt: "",
+        adminOpenidMasked: "",
+        statsCards: [],
+        statsMetaRows: [],
       });
       return;
     }
 
-    wx.setStorageSync(PROXY_KEY_STORAGE, accessKey);
     this.setData({
-      proxyAccessKey: accessKey,
-      proxyKeySaved: true,
-      notice: "已保存到本机微信。我们不会把密钥写入项目代码或页面地址。",
-      noticeType: "success",
-      backendTestResult: "",
-      statsResult: "",
+      adminAuthenticated: true,
+      adminUsername: session.username,
+      adminSessionToken: session.token,
+      adminSessionExpiresAt: session.expiresAt,
+      adminOpenidMasked: session.openidMasked || "",
+      loginResult: "已恢复本机管理会话。",
+      loginResultType: "success",
     });
     this.refreshAdminStats();
   },
 
-  clearProxyKey() {
-    wx.showModal({
-      title: "清除本机密钥",
-      content: "清除后，查看管理统计和测试后端连接前需要重新填写管理后台密钥。",
-      confirmText: "清除",
-      success: (result) => {
-        if (!result.confirm) {
+  handleAdminUsernameInput(event) {
+    this.setData({
+      adminUsername: event.detail.value,
+      loginResult: "",
+    });
+  },
+
+  handleAdminPasswordInput(event) {
+    this.setData({
+      adminPassword: event.detail.value,
+      loginResult: "",
+    });
+  },
+
+  submitAdminLogin() {
+    const username = this.data.adminUsername.trim();
+    const password = this.data.adminPassword.trim();
+
+    if (!username || !password) {
+      this.setData({
+        loginResult: "请输入管理员用户名和密码。",
+        loginResultType: "warning",
+      });
+      return;
+    }
+
+    this.setData({
+      loggingIn: true,
+      loginResult: "正在获取微信身份并登录管理后台。",
+      loginResultType: "warning",
+    });
+
+    wx.login({
+      success: (loginResult) => {
+        if (!loginResult.code) {
+          this.finishAdminLogin("没有获取到微信登录 code，请稍后再试。", "error");
           return;
         }
 
-        wx.removeStorageSync(PROXY_KEY_STORAGE);
-        this.setData({
-          proxyAccessKey: "",
-          proxyKeySaved: false,
-          notice: "已清除本机保存的后端访问密钥。",
-          noticeType: "success",
-          backendTestResult: "",
-          statsResult: "",
-          statsCards: [],
-          statsMetaRows: [],
+        this.requestAdminLogin({
+          username,
+          password,
+          wechatCode: loginResult.code,
         });
       },
+      fail: () => {
+        this.finishAdminLogin("微信登录失败，无法校验管理员微信身份。", "error");
+      },
+    });
+  },
+
+  requestAdminLogin({ username, password, wechatCode }) {
+    wx.request({
+      url: ADMIN_LOGIN_URL,
+      method: "POST",
+      timeout: 20000,
+      header: {
+        "Content-Type": "application/json",
+      },
+      data: {
+        username,
+        password,
+        wechatCode,
+        platform: "miniprogram",
+      },
+      success: (response) => {
+        const data = response.data || {};
+
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          this.finishAdminLogin(formatAdminLoginError(response.statusCode, data), "error");
+          return;
+        }
+
+        const token = String(data.token || "");
+        const expiresAt = String(data.expiresAt || "");
+
+        if (!token) {
+          this.finishAdminLogin("管理后台没有返回会话令牌，请确认 Worker 已部署最新版本。", "error");
+          return;
+        }
+
+        const session = {
+          token,
+          username,
+          expiresAt,
+          openidMasked: data.openidMasked || "",
+        };
+
+        wx.setStorageSync(ADMIN_SESSION_STORAGE, session);
+        this.setData({
+          adminAuthenticated: true,
+          adminPassword: "",
+          adminSessionToken: token,
+          adminSessionExpiresAt: expiresAt,
+          adminOpenidMasked: data.openidMasked || "",
+          loginResult: "管理后台登录成功。",
+          loginResultType: "success",
+          loggingIn: false,
+        });
+        this.refreshAdminStats();
+      },
+      fail: (error) => {
+        this.finishAdminLogin(formatAdminLoginNetworkError(error), "error");
+      },
+    });
+  },
+
+  finishAdminLogin(message, type) {
+    this.setData({
+      loggingIn: false,
+      loginResult: message,
+      loginResultType: type,
+    });
+  },
+
+  logoutAdmin() {
+    wx.removeStorageSync(ADMIN_SESSION_STORAGE);
+    this.setData({
+      adminAuthenticated: false,
+      adminSessionToken: "",
+      adminSessionExpiresAt: "",
+      adminOpenidMasked: "",
+      backendTestResult: "",
+      statsResult: "",
+      statsCards: [],
+      statsMetaRows: [],
+      loginResult: "已退出管理后台。",
+      loginResultType: "success",
     });
   },
 
   clearLocalData() {
     wx.showModal({
       title: "清除本机数据",
-      content: "将清除本机保存的后端访问密钥、出生信息、发送确认、后台任务和解读历史。不会影响 Cloudflare、微信后台或服务器数据。",
+      content: "将清除本机管理会话、旧版访问密钥、出生信息、发送确认、后台任务、匿名本机标识和解读历史。不会影响 Cloudflare、微信后台或服务器数据。",
       confirmText: "清除",
       success: (result) => {
         if (!result.confirm) {
@@ -127,6 +229,7 @@ Page({
         }
 
         [
+          ADMIN_SESSION_STORAGE,
           PROXY_KEY_STORAGE,
           BIRTH_PROFILE_STORAGE,
           LLM_CONSENT_STORAGE,
@@ -138,10 +241,12 @@ Page({
         });
 
         this.setData({
-          proxyAccessKey: "",
-          proxyKeySaved: false,
-          notice: "已清除本机保存的数据。",
-          noticeType: "success",
+          adminAuthenticated: false,
+          adminSessionToken: "",
+          adminSessionExpiresAt: "",
+          adminOpenidMasked: "",
+          loginResult: "已清除本机保存的数据。",
+          loginResultType: "success",
           backendTestResult: "",
           backendTestType: "success",
           statsResult: "",
@@ -154,11 +259,9 @@ Page({
   },
 
   refreshAdminStats() {
-    const accessKey = this.data.proxyAccessKey.trim();
-
-    if (!accessKey) {
+    if (!this.data.adminSessionToken) {
       this.setData({
-        statsResult: "请先填写并保存管理后台密钥，再读取统计。",
+        statsResult: "请先登录管理后台，再读取统计。",
         statsResultType: "warning",
       });
       return;
@@ -174,14 +277,12 @@ Page({
       url: ADMIN_STATS_URL,
       method: "GET",
       timeout: 20000,
-      header: {
-        "X-Ziwei-Proxy-Key": accessKey,
-      },
+      header: adminHeaders(this.data.adminSessionToken),
       success: (response) => {
         if (response.statusCode < 200 || response.statusCode >= 300) {
-          this.setData({
-            statsResult: formatAdminStatsError(response.statusCode, response.data),
-            statsResultType: "error",
+          this.handleAdminRequestFailure({
+            message: formatAdminStatsError(response.statusCode, response.data),
+            target: "stats",
           });
           return;
         }
@@ -210,11 +311,9 @@ Page({
   },
 
   testBackend() {
-    const accessKey = this.data.proxyAccessKey.trim();
-
-    if (!accessKey) {
+    if (!this.data.adminSessionToken) {
       this.setData({
-        backendTestResult: "请先填写后端访问密钥，再测试连接。",
+        backendTestResult: "请先登录管理后台，再测试连接。",
         backendTestType: "warning",
       });
       return;
@@ -222,32 +321,32 @@ Page({
 
     this.setData({
       testingBackend: true,
-      backendTestResult: "正在测试 request 合法域名、后端密钥和模型链路。",
+      backendTestResult: "正在测试 request 合法域名、管理会话和模型链路。",
       backendTestType: "warning",
     });
 
     wx.request({
-      url: API_URL,
+      url: ADMIN_LLM_TEST_URL,
       method: "POST",
       timeout: 60000,
       header: {
         "Content-Type": "application/json",
-        "X-Ziwei-Proxy-Key": accessKey,
+        ...adminHeaders(this.data.adminSessionToken),
       },
       data: {
         prompt: "这是小程序后端连通性测试。请只回复：连接正常。",
       },
       success: (response) => {
         if (response.statusCode < 200 || response.statusCode >= 300) {
-          this.setData({
-            backendTestResult: formatBackendTestError(response.statusCode, response.data),
-            backendTestType: "error",
+          this.handleAdminRequestFailure({
+            message: formatBackendTestError(response.statusCode, response.data),
+            target: "backend",
           });
           return;
         }
 
         this.setData({
-          backendTestResult: "后端连接测试通过。request 域名、访问密钥和模型链路都已返回成功。",
+          backendTestResult: "后端连接测试通过。request 域名、管理会话和模型链路都已返回成功。",
           backendTestType: "success",
         });
       },
@@ -265,8 +364,40 @@ Page({
     });
   },
 
+  handleAdminRequestFailure({ message, target }) {
+    const nextData = target === "backend"
+      ? {
+          backendTestResult: message,
+          backendTestType: "error",
+        }
+      : {
+          statsResult: message,
+          statsResultType: "error",
+        };
+
+    if (String(message || "").includes("登录已过期")) {
+      wx.removeStorageSync(ADMIN_SESSION_STORAGE);
+      this.setData({
+        ...nextData,
+        adminAuthenticated: false,
+        adminSessionToken: "",
+      });
+      return;
+    }
+
+    this.setData(nextData);
+  },
+
   copyValue(event) {
     const value = event.currentTarget.dataset.value;
+
+    if (!value) {
+      wx.showToast({
+        title: "暂无内容",
+        icon: "none",
+      });
+      return;
+    }
 
     wx.setClipboardData({
       data: value,
@@ -281,10 +412,12 @@ Page({
 
   copyDiagnostics() {
     const diagnostics = buildDiagnostics({
+      adminAuthenticated: this.data.adminAuthenticated,
+      adminUsername: this.data.adminUsername,
+      adminOpenidMasked: this.data.adminOpenidMasked,
       backendTestResult: this.data.backendTestResult,
       backendTestType: this.data.backendTestType,
-      proxyAccessKey: this.data.proxyAccessKey,
-      proxyKeySaved: this.data.proxyKeySaved,
+      statsResult: this.data.statsResult,
     });
 
     wx.setClipboardData({
@@ -325,12 +458,88 @@ Page({
   },
 });
 
+function adminHeaders(token) {
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+function readAdminSession() {
+  const session = wx.getStorageSync(ADMIN_SESSION_STORAGE);
+
+  if (!session || typeof session !== "object") {
+    return null;
+  }
+
+  const token = String(session.token || "");
+  const expiresAt = String(session.expiresAt || "");
+
+  if (!token) {
+    return null;
+  }
+
+  if (expiresAt && Date.parse(expiresAt) <= Date.now()) {
+    wx.removeStorageSync(ADMIN_SESSION_STORAGE);
+    return null;
+  }
+
+  return {
+    token,
+    username: String(session.username || ""),
+    expiresAt,
+    openidMasked: String(session.openidMasked || ""),
+  };
+}
+
+function formatAdminLoginError(statusCode, data) {
+  const rawError =
+    data && typeof data.error === "string" ? data.error : "管理登录没有返回明确错误";
+
+  if (statusCode === 401) {
+    return "管理员用户名或密码不正确。";
+  }
+
+  if (statusCode === 403 && data && data.setupRequired && data.openid) {
+    return `微信 openid 尚未配置为管理员：${data.openid}。请把它加入 Worker secret ADMIN_WECHAT_OPENIDS 后再登录。`;
+  }
+
+  if (statusCode === 403) {
+    return data && data.openidMasked
+      ? `当前微信身份不在管理员白名单中：${data.openidMasked}`
+      : "当前微信身份不在管理员白名单中。";
+  }
+
+  if (statusCode === 500 && rawError.includes("WECHAT_APP_SECRET")) {
+    return "Worker 还没有配置 WECHAT_APP_SECRET，无法校验微信 openid。";
+  }
+
+  if (statusCode >= 500) {
+    return `管理登录暂时异常（${statusCode}）：${rawError}`;
+  }
+
+  return `管理登录失败（${statusCode}）：${rawError}`;
+}
+
+function formatAdminLoginNetworkError(error) {
+  const message = error && error.errMsg ? error.errMsg : "";
+
+  if (message.includes("url not in domain list")) {
+    return "请求被微信拦截。请在小程序后台把 https://api.tanxj.xyz 配置为 request 合法域名。";
+  }
+
+  if (message.includes("timeout")) {
+    return "管理登录超时。可以稍后再试。";
+  }
+
+  return "管理登录失败。请确认网络正常，并且 Worker 已部署最新版本。";
+}
+
 function formatBackendTestError(statusCode, data) {
   const rawError =
     data && typeof data.error === "string" ? data.error : "后端没有返回明确错误";
 
   if (statusCode === 401) {
-    return "后端访问密钥不正确。请重新粘贴密钥后再测试。";
+    return "管理登录已过期，请重新登录后再测试。";
   }
 
   if (statusCode === 400 && rawError.includes("Missing prompt")) {
@@ -363,7 +572,7 @@ function formatAdminStatsError(statusCode, data) {
     data && typeof data.error === "string" ? data.error : "管理统计没有返回明确错误";
 
   if (statusCode === 401) {
-    return "管理后台密钥不正确。请重新粘贴密钥后再刷新统计。";
+    return "管理登录已过期，请重新登录后再刷新统计。";
   }
 
   if (statusCode === 404) {
@@ -444,6 +653,10 @@ function buildStatsMetaRows(data) {
       value: PUBLIC_LLM_JOB_URL,
     },
     {
+      label: "管理登录接口",
+      value: ADMIN_LOGIN_URL,
+    },
+    {
       label: "管理统计接口",
       value: ADMIN_STATS_URL,
     },
@@ -515,17 +728,13 @@ function formatNumber(value) {
 }
 
 function buildDiagnostics({
+  adminAuthenticated,
+  adminUsername,
+  adminOpenidMasked,
   backendTestResult,
   backendTestType,
-  proxyAccessKey,
-  proxyKeySaved,
+  statsResult,
 }) {
-  const keyStatus = proxyKeySaved
-    ? "saved"
-    : String(proxyAccessKey || "").trim()
-      ? "filled-not-saved"
-      : "missing";
-
   return [
     "Ziwei Mini Program Diagnostics",
     `Time: ${new Date().toISOString()}`,
@@ -534,11 +743,16 @@ function buildDiagnostics({
     `LLM endpoint: ${API_URL}`,
     `LLM job endpoint: ${LLM_JOB_URL}`,
     `Public LLM job endpoint: ${PUBLIC_LLM_JOB_URL}`,
+    `Admin login endpoint: ${ADMIN_LOGIN_URL}`,
     `Admin stats endpoint: ${ADMIN_STATS_URL}`,
+    `Admin LLM test endpoint: ${ADMIN_LLM_TEST_URL}`,
     `Ad status: ${adStatusText()}`,
-    `Backend key status: ${keyStatus}`,
+    `Admin authenticated: ${adminAuthenticated ? "yes" : "no"}`,
+    `Admin username: ${adminUsername || "-"}`,
+    `Admin openid: ${adminOpenidMasked || "-"}`,
     `Backend test status: ${backendTestType || "not-run"}`,
     `Backend test result: ${backendTestResult || "not run"}`,
+    `Stats result: ${statsResult || "not run"}`,
     "Secret included: no",
   ].join("\n");
 }

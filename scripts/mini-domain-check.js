@@ -48,7 +48,20 @@ async function main() {
   await checkHttpsStatus(checks, "Worker admin stats route", config.ADMIN_STATS_URL, {
     method: "GET",
     allowedStatusCodes: [401],
-    bodyPattern: /Invalid backend access key|backend access key|access key/i,
+    bodyPattern: /Missing admin session|admin session|Invalid backend access key|backend access key|access key/i,
+  });
+  await checkHttpsStatus(checks, "Worker admin login route", config.ADMIN_LOGIN_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      username: "domain-check",
+      password: "domain-check",
+      platform: "web",
+    }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    allowedStatusCodes: [401, 500],
+    bodyPattern: /Invalid admin username|ADMIN_USERNAME|ADMIN_PASSWORD|username|password/i,
   });
 
   console.log("Mini Program domain check\n");

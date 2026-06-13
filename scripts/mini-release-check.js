@@ -63,6 +63,7 @@ function printReleaseSummary() {
   console.log(`LLM endpoint: ${config.API_URL}`);
   console.log(`LLM job endpoint: ${config.LLM_JOB_URL}`);
   console.log(`Public LLM job endpoint: ${config.PUBLIC_LLM_JOB_URL}`);
+  console.log(`Admin login endpoint: ${config.ADMIN_LOGIN_URL}`);
   console.log(`Admin stats endpoint: ${config.ADMIN_STATS_URL}`);
   console.log(`Mini Program source package: ${formatBytes(packageSize)}`);
 
@@ -72,13 +73,15 @@ function printReleaseSummary() {
     "Confirm https://api.tanxj.xyz is accepted as a WeChat request legal domain.",
     "Confirm https://www.tanxj.xyz is accepted as a web-view business domain, if keeping the H5 route in review.",
     "Generate one native background LLM report through the public user entry.",
-    "Long-press the home title and open the management backend.",
-    "Run backend connectivity and admin stats refresh with the access key saved locally.",
+    "Tap the compliance page model heading seven times and open the management backend.",
+    "Log in with the admin username/password on the owner WeChat account.",
+    "Run backend connectivity and admin stats refresh through the admin session.",
+    "Open https://www.tanxj.xyz/dashboard and confirm username/password login plus stats refresh.",
     "Copy diagnostics from the management backend if the backend connectivity test fails.",
     "Confirm the management backend can clear all local Mini Program data.",
     "Confirm birth date, birth time, and gender restore after reopening and can be reset locally.",
     "Confirm the native LLM report restores for the same birth profile and can be cleared locally.",
-    "Confirm the native LLM report copy action excludes the backend access key.",
+    "Confirm the native LLM report copy action excludes backend and model secrets.",
     "Upload only with npm run mini:upload -- --version <version> --desc <description> --confirm-upload.",
   ];
 

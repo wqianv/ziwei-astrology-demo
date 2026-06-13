@@ -39,6 +39,10 @@
   box-shadow: 0 8rpx 20rpx rgba(34, 55, 48, 0.06);
 }
 
+.login-panel {
+  margin-top: 28rpx;
+}
+
 .panel-title {
   color: #1f2a25;
   font-size: 30rpx;
@@ -117,6 +121,17 @@
   height: 72rpx;
   margin-top: 14rpx;
   font-size: 27rpx;
+}
+
+.button-row {
+  display: flex;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.button-row button {
+  flex: 1;
+  margin-top: 0;
 }
 
 .notice {

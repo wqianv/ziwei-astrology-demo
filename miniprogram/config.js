@@ -3,6 +3,8 @@ const REQUEST_DOMAIN = "https://api.tanxj.xyz";
 const API_URL = `${REQUEST_DOMAIN}/api/llm/interpret`;
 const LLM_JOB_URL = `${REQUEST_DOMAIN}/api/llm/jobs`;
 const PUBLIC_LLM_JOB_URL = `${REQUEST_DOMAIN}/api/llm/public/jobs`;
+const ADMIN_LOGIN_URL = `${REQUEST_DOMAIN}/api/admin/login`;
+const ADMIN_LLM_TEST_URL = `${REQUEST_DOMAIN}/api/admin/llm-test`;
 const ADMIN_STATS_URL = `${REQUEST_DOMAIN}/api/admin/stats`;
 const SHARE_TITLE = "谈玄机命理排盘";
 const AD_CUSTOM_UNIT_ID = "";
@@ -10,6 +12,7 @@ const AD_BANNER_UNIT_ID = "";
 const BIRTH_PROFILE_STORAGE = "ziwei-mini.birthProfile";
 const PROXY_KEY_STORAGE = "ziwei-mini.proxyAccessKey";
 const CLIENT_ID_STORAGE = "ziwei-mini.clientId";
+const ADMIN_SESSION_STORAGE = "ziwei-mini.adminSession";
 const LLM_CONSENT_STORAGE = "ziwei-mini.llmConsentAccepted";
 const LLM_REPORT_STORAGE = "ziwei-mini.latestReport";
 const LLM_JOB_STORAGE = "ziwei-mini.activeReportJob";
@@ -17,6 +20,9 @@ const LLM_JOB_STORAGE = "ziwei-mini.activeReportJob";
 module.exports = {
   AD_BANNER_UNIT_ID,
   AD_CUSTOM_UNIT_ID,
+  ADMIN_LLM_TEST_URL,
+  ADMIN_LOGIN_URL,
+  ADMIN_SESSION_STORAGE,
   ADMIN_STATS_URL,
   API_URL,
   BIRTH_PROFILE_STORAGE,

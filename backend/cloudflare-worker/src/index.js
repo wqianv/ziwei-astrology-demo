@@ -1,10 +1,14 @@
-const DEFAULT_ALLOWED_ORIGIN = "https://wqianv.github.io";
+const DEFAULT_ALLOWED_ORIGIN =
+  "https://www.tanxj.xyz,https://tanxj.xyz,https://wqianv.github.io";
 const DEFAULT_LLM_BASE_URL = "https://api.deepseek.com";
 const DEFAULT_LLM_MODEL = "deepseek-v4-pro";
 const DEFAULT_JOB_TTL_SECONDS = 24 * 60 * 60;
+const DEFAULT_ADMIN_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const MAX_PROMPT_LENGTH = 30000;
 const JOBS_PATH = "/api/llm/jobs";
 const PUBLIC_JOBS_PATH = "/api/llm/public/jobs";
+const ADMIN_LOGIN_PATH = "/api/admin/login";
+const ADMIN_LLM_TEST_PATH = "/api/admin/llm-test";
 const ADMIN_STATS_PATH = "/api/admin/stats";
 const LEGACY_INTERPRET_PATHS = ["/api/llm/interpret", "/api/deepseek/interpret"];
 const DEFAULT_PUBLIC_HOURLY_LIMIT = 3;
@@ -12,6 +16,8 @@ const DEFAULT_PUBLIC_DAILY_LIMIT = 8;
 const DEFAULT_PUBLIC_IP_DAILY_LIMIT = 60;
 const METRIC_FIELDS = [
   "adminStats",
+  "adminLogin",
+  "adminLlmTest",
   "completedJobs",
   "createJob",
   "failedJobs",
@@ -50,8 +56,8 @@ export default {
       return json({ error: "Origin not allowed" }, 403, request, env);
     }
 
-    if (!route.public) {
-      const accessCheck = validateProxyAccessKey(request, env);
+    if (route.auth !== "none") {
+      const accessCheck = await validateRouteAccess(request, env, route);
 
       if (!accessCheck.ok) {
         ctx.waitUntil(trackMetric(env, "invalidKey"));
@@ -62,6 +68,14 @@ export default {
           env,
         );
       }
+    }
+
+    if (route.type === "adminLogin") {
+      return handleAdminLogin(request, env, ctx);
+    }
+
+    if (route.type === "adminLlmTest") {
+      return handleAdminLlmTest(request, env, ctx);
     }
 
     if (route.type === "interpret") {
@@ -258,6 +272,145 @@ async function handleGetJob(jobId, request, env, route) {
   );
 }
 
+async function handleAdminLogin(request, env, ctx) {
+  if (!jobStore(env)) {
+    return json({ error: "Missing LLM_JOBS KV binding" }, 500, request, env);
+  }
+
+  const bodyResult = await readJsonObject(request);
+
+  if (!bodyResult.ok) {
+    return json({ error: bodyResult.error }, bodyResult.status, request, env);
+  }
+
+  const body = bodyResult.body;
+  const username = typeof body.username === "string" ? body.username.trim() : "";
+  const password = typeof body.password === "string" ? body.password : "";
+  const platform = body.platform === "miniprogram" ? "miniprogram" : "web";
+  const credentialsCheck = validateAdminCredentials(username, password, env);
+
+  if (!credentialsCheck.ok) {
+    ctx.waitUntil(trackMetric(env, "invalidKey"));
+    return json(
+      { error: credentialsCheck.error },
+      credentialsCheck.status,
+      request,
+      env,
+    );
+  }
+
+  let openid = "";
+  let openidMasked = "";
+
+  if (platform === "miniprogram") {
+    const wechatCode =
+      typeof body.wechatCode === "string" ? body.wechatCode.trim() : "";
+
+    if (!wechatCode) {
+      return json({ error: "Missing wechatCode" }, 400, request, env);
+    }
+
+    const wechatResult = await exchangeWechatCode(env, wechatCode);
+
+    if (!wechatResult.ok) {
+      return json(
+        { error: wechatResult.error, details: wechatResult.details },
+        wechatResult.status,
+        request,
+        env,
+      );
+    }
+
+    openid = wechatResult.openid;
+    openidMasked = maskOpenid(openid);
+
+    const allowedOpenids = adminWechatOpenids(env);
+
+    if (!allowedOpenids.length) {
+      return json(
+        {
+          error: "Missing ADMIN_WECHAT_OPENIDS",
+          setupRequired: true,
+          openid,
+          openidMasked,
+        },
+        403,
+        request,
+        env,
+      );
+    }
+
+    if (!allowedOpenids.includes(openid)) {
+      return json(
+        {
+          error: "Wechat openid is not allowed",
+          openidMasked,
+        },
+        403,
+        request,
+        env,
+      );
+    }
+  }
+
+  const token = randomToken();
+  const now = new Date();
+  const ttlSeconds = adminSessionTtlSeconds(env);
+  const expiresAt = new Date(now.getTime() + ttlSeconds * 1000).toISOString();
+  const session = {
+    username,
+    platform,
+    openidMasked,
+    createdAt: now.toISOString(),
+    expiresAt,
+  };
+
+  await putAdminSession(env, token, session, ttlSeconds);
+  ctx.waitUntil(trackMetric(env, "adminLogin"));
+
+  return json(
+    {
+      token,
+      username,
+      platform,
+      openidMasked,
+      expiresAt,
+    },
+    200,
+    request,
+    env,
+  );
+}
+
+async function handleAdminLlmTest(request, env, ctx) {
+  ctx.waitUntil(trackMetric(env, "adminLlmTest"));
+  const promptResult = await readPrompt(request);
+
+  if (!promptResult.ok) {
+    ctx.waitUntil(trackMetric(env, "failedJobs"));
+    return json(
+      { error: promptResult.error },
+      promptResult.status,
+      request,
+      env,
+    );
+  }
+
+  try {
+    const result = await requestLLM(env, promptResult.prompt);
+    ctx.waitUntil(trackUsage(env, result.usage));
+    return json(result, 200, request, env);
+  } catch (error) {
+    ctx.waitUntil(trackMetric(env, "llmError"));
+    return json(
+      llmErrorBody(error),
+      error.status || 500,
+      request,
+      env,
+    );
+  }
+}
+
 async function runInterpretJob(env, jobId, prompt) {
   const existing = await getJob(env, jobId);
   const baseJob = existing || {
@@ -413,18 +566,17 @@ async function requestLLM(env, prompt) {
 }
 
 async function readPrompt(request) {
-  let body;
+  const bodyResult = await readJsonObject(request);
 
-  try {
-    body = await request.json();
-  } catch {
+  if (!bodyResult.ok) {
     return {
       ok: false,
-      status: 400,
-      error: "Invalid JSON body",
+      status: bodyResult.status,
+      error: bodyResult.error,
     };
   }
 
+  const body = bodyResult.body;
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
 
   if (!prompt) {
@@ -449,11 +601,57 @@ async function readPrompt(request) {
   };
 }
 
+async function readJsonObject(request) {
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid JSON body",
+    };
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "JSON body must be an object",
+    };
+  }
+
+  return {
+    ok: true,
+    body,
+  };
+}
+
 function resolveRoute(pathname) {
+  if (pathname === ADMIN_LOGIN_PATH) {
+    return {
+      type: "adminLogin",
+      methods: ["POST"],
+      auth: "none",
+      public: true,
+    };
+  }
+
+  if (pathname === ADMIN_LLM_TEST_PATH) {
+    return {
+      type: "adminLlmTest",
+      methods: ["POST"],
+      auth: "adminSession",
+      public: false,
+    };
+  }
+
   if (pathname === ADMIN_STATS_PATH) {
     return {
       type: "adminStats",
       methods: ["GET"],
+      auth: "adminSessionOrProxy",
       public: false,
     };
   }
@@ -462,6 +660,7 @@ function resolveRoute(pathname) {
     return {
       type: "interpret",
       methods: ["POST"],
+      auth: "proxy",
       public: false,
     };
   }
@@ -470,6 +669,7 @@ function resolveRoute(pathname) {
     return {
       type: "createJob",
       methods: ["POST"],
+      auth: "proxy",
       public: false,
     };
   }
@@ -478,6 +678,7 @@ function resolveRoute(pathname) {
     return {
       type: "createJob",
       methods: ["POST"],
+      auth: "none",
       public: true,
     };
   }
@@ -492,6 +693,7 @@ function resolveRoute(pathname) {
         type: "getJob",
         methods: ["GET"],
         jobId,
+        auth: "proxy",
         public: false,
       };
     }
@@ -507,6 +709,7 @@ function resolveRoute(pathname) {
         type: "getJob",
         methods: ["GET"],
         jobId,
+        auth: "none",
         public: true,
       };
     }
@@ -545,9 +748,29 @@ function corsHeaders(request, env) {
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Ziwei-Client-Id, X-Ziwei-Proxy-Key",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Ziwei-Client-Id, X-Ziwei-Proxy-Key",
     Vary: "Origin",
   };
+}
+
+async function validateRouteAccess(request, env, route) {
+  if (route.auth === "adminSession") {
+    return validateAdminSession(request, env);
+  }
+
+  if (route.auth === "adminSessionOrProxy") {
+    if (getBearerToken(request)) {
+      return validateAdminSession(request, env);
+    }
+
+    return validateProxyAccessKey(request, env);
+  }
+
+  if (route.auth === "proxy") {
+    return validateProxyAccessKey(request, env);
+  }
+
+  return { ok: true };
 }
 
 function validateProxyAccessKey(request, env) {
@@ -570,6 +793,194 @@ function validateProxyAccessKey(request, env) {
   }
 
   return { ok: true };
+}
+
+async function validateAdminSession(request, env) {
+  if (!jobStore(env)) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Missing LLM_JOBS KV binding",
+    };
+  }
+
+  const token = getBearerToken(request);
+
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      error: "Missing admin session",
+    };
+  }
+
+  const session = await getAdminSession(env, token);
+
+  if (!session) {
+    return {
+      ok: false,
+      status: 401,
+      error: "Invalid or expired admin session",
+    };
+  }
+
+  if (session.expiresAt && Date.parse(session.expiresAt) <= Date.now()) {
+    await deleteAdminSession(env, token);
+    return {
+      ok: false,
+      status: 401,
+      error: "Invalid or expired admin session",
+    };
+  }
+
+  return { ok: true, session };
+}
+
+function getBearerToken(request) {
+  const header = request.headers.get("Authorization") || "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+
+  return match ? match[1].trim() : "";
+}
+
+function validateAdminCredentials(username, password, env) {
+  const configuredUsername = env.ADMIN_USERNAME?.trim();
+  const configuredPassword = env.ADMIN_PASSWORD || "";
+
+  if (!configuredUsername || !configuredPassword) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Missing ADMIN_USERNAME or ADMIN_PASSWORD",
+    };
+  }
+
+  if (!safeEqual(username, configuredUsername) || !safeEqual(password, configuredPassword)) {
+    return {
+      ok: false,
+      status: 401,
+      error: "Invalid admin username or password",
+    };
+  }
+
+  return { ok: true };
+}
+
+async function exchangeWechatCode(env, code) {
+  const appId = env.WECHAT_APP_ID?.trim();
+  const appSecret = env.WECHAT_APP_SECRET?.trim();
+
+  if (!appId || !appSecret) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Missing WECHAT_APP_ID or WECHAT_APP_SECRET",
+    };
+  }
+
+  const query = new URLSearchParams({
+    appid: appId,
+    secret: appSecret,
+    js_code: code,
+    grant_type: "authorization_code",
+  });
+  const response = await fetch(
+    `https://api.weixin.qq.com/sns/jscode2session?${query.toString()}`,
+  );
+  const responseText = await response.text();
+  const data = parseJson(responseText);
+
+  if (!response.ok || data?.errcode) {
+    return {
+      ok: false,
+      status: response.ok ? 502 : response.status,
+      error: data?.errmsg || responseText || "Wechat jscode2session failed",
+      details: data || responseText.slice(0, 500),
+    };
+  }
+
+  if (!data?.openid) {
+    return {
+      ok: false,
+      status: 502,
+      error: "Wechat jscode2session did not return openid",
+      details: data || responseText.slice(0, 500),
+    };
+  }
+
+  return {
+    ok: true,
+    openid: String(data.openid),
+  };
+}
+
+function adminWechatOpenids(env) {
+  return String(env.ADMIN_WECHAT_OPENIDS || "")
+    .split(",")
+    .map((openid) => openid.trim())
+    .filter(Boolean);
+}
+
+async function putAdminSession(env, token, session, ttlSeconds) {
+  await jobStore(env).put(await adminSessionKey(token), JSON.stringify(session), {
+    expirationTtl: ttlSeconds,
+  });
+}
+
+async function getAdminSession(env, token) {
+  return parseJson(await jobStore(env).get(await adminSessionKey(token)));
+}
+
+async function deleteAdminSession(env, token) {
+  await jobStore(env).delete(await adminSessionKey(token));
+}
+
+async function adminSessionKey(token) {
+  return `admin-session:${await sha256Hex(`admin:${token}`, 64)}`;
+}
+
+function adminSessionTtlSeconds(env) {
+  const value = Number(env.ADMIN_SESSION_TTL_SECONDS);
+
+  if (!Number.isFinite(value)) {
+    return DEFAULT_ADMIN_SESSION_TTL_SECONDS;
+  }
+
+  return Math.min(7 * 24 * 60 * 60, Math.max(10 * 60, Math.floor(value)));
+}
+
+function randomToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+
+  return `${crypto.randomUUID()}.${Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function maskOpenid(openid) {
+  if (!openid) {
+    return "";
+  }
+
+  if (openid.length <= 10) {
+    return `${openid.slice(0, 2)}***${openid.slice(-2)}`;
+  }
+
+  return `${openid.slice(0, 6)}***${openid.slice(-4)}`;
+}
+
+function safeEqual(left, right) {
+  const leftValue = String(left || "");
+  const rightValue = String(right || "");
+  const maxLength = Math.max(leftValue.length, rightValue.length);
+  let diff = leftValue.length ^ rightValue.length;
+
+  for (let index = 0; index < maxLength; index += 1) {
+    diff |= leftValue.charCodeAt(index) ^ rightValue.charCodeAt(index);
+  }
+
+  return diff === 0;
 }
 
 function providerApiKey(env) {
@@ -595,10 +1006,11 @@ function isAllowedOrigin(request, env) {
 }
 
 function allowedOrigins(env) {
-  return (env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN)
+  return `${env.ALLOWED_ORIGIN || ""},${DEFAULT_ALLOWED_ORIGIN}`
     .split(",")
     .map((origin) => origin.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((origin, index, origins) => origins.indexOf(origin) === index);
 }
 
 async function publicClient(request) {
@@ -808,7 +1220,7 @@ function positiveInt(value, fallback) {
   return Math.floor(parsed);
 }
 
-async function sha256Hex(value) {
+async function sha256Hex(value, length = 24) {
   const buffer = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(value),
@@ -817,7 +1229,7 @@ async function sha256Hex(value) {
   return Array.from(new Uint8Array(buffer))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("")
-    .slice(0, 24);
+    .slice(0, length);
 }
 
 function jobStore(env) {

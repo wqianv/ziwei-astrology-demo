@@ -5,7 +5,6 @@ const {
   LLM_JOB_STORAGE,
   LLM_REPORT_STORAGE,
   PUBLIC_LLM_JOB_URL,
-  PROXY_KEY_STORAGE,
   SHARE_TITLE,
   SITE_URL,
 } = require("../../config");
@@ -39,8 +38,6 @@ Page({
     genderOptions: decorateGenderOptions(DEFAULT_BIRTH_PROFILE.genderIndex),
     birthProfileSaved: false,
     birthProfileNotice: "",
-    proxyAccessKey: "",
-    proxyKeySaved: false,
     clientId: "",
     llmConsentAccepted: false,
     canGenerate: false,
@@ -49,7 +46,7 @@ Page({
     palaceDetailsExpanded: false,
     loading: false,
     elapsedSeconds: 0,
-    generateButtonText: "生成原生解读",
+    generateButtonText: "生成命盘解读",
     loadingTip: "正在整理出生信息与命盘摘要。",
     error: "",
     saveNotice: "",
@@ -72,13 +69,13 @@ Page({
 
   onLoad() {
     this.restoreBirthProfile();
-    this.syncProxyAccessKey();
+    this.syncConsentAndClient();
     this.refreshProfile();
     this.resumeActiveReportJob();
   },
 
   onShow() {
-    this.syncProxyAccessKey();
+    this.syncConsentAndClient();
     this.resumeActiveReportJob();
   },
 
@@ -92,14 +89,11 @@ Page({
     this.stopJobPoller();
   },
 
-  syncProxyAccessKey() {
-    const savedProxyAccessKey = wx.getStorageSync(PROXY_KEY_STORAGE) || "";
+  syncConsentAndClient() {
     const llmConsentAccepted = wx.getStorageSync(LLM_CONSENT_STORAGE) === true;
     const clientId = ensureClientId();
 
     this.setData({
-      proxyAccessKey: savedProxyAccessKey,
-      proxyKeySaved: Boolean(savedProxyAccessKey.trim()),
       clientId,
       llmConsentAccepted,
       canGenerate: canGenerateReport({
@@ -172,7 +166,7 @@ Page({
   clearBirthProfile() {
     wx.showModal({
       title: "重置出生信息",
-        content: "会清除本机保存的生日、时辰和性别，并恢复为默认示例；不会清除已保存解读和管理后台密钥。",
+        content: "会清除本机保存的生日、时辰和性别，并恢复为默认示例；不会清除已保存解读。",
       confirmText: "重置",
       success: (result) => {
         if (!result.confirm) {
@@ -234,12 +228,6 @@ Page({
   openWebApp() {
     wx.navigateTo({
       url: `/pages/webview/webview?url=${encodeURIComponent(SITE_URL)}`,
-    });
-  },
-
-  openSettings() {
-    wx.navigateTo({
-      url: "/pages/settings/settings",
     });
   },
 
@@ -420,7 +408,7 @@ Page({
         consentAccepted: this.data.llmConsentAccepted,
         loading: false,
       }),
-      generateButtonText: "生成原生解读",
+      generateButtonText: "生成命盘解读",
     });
   },
 
@@ -455,7 +443,7 @@ Page({
         loading: false,
         activeJobId: "",
         activeJobSignature: "",
-        generateButtonText: "生成原生解读",
+        generateButtonText: "生成命盘解读",
         canGenerate: canGenerateReport({
           consentAccepted: this.data.llmConsentAccepted,
           loading: false,
@@ -480,7 +468,7 @@ Page({
         consentAccepted: this.data.llmConsentAccepted,
         loading: false,
       }),
-      generateButtonText: "生成原生解读",
+      generateButtonText: "生成命盘解读",
       saveNotice: "解读已保存到本机微信。",
     });
   },
@@ -581,7 +569,7 @@ Page({
   clearCachedReport() {
     wx.showModal({
       title: "清除本机解读",
-      content: "会清除当前小程序本机保存的解读历史，不会清除出生信息和管理后台密钥。",
+      content: "会清除当前小程序本机保存的解读历史，不会清除出生信息。",
       confirmText: "清除",
       success: (result) => {
         if (!result.confirm) {

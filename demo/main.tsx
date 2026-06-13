@@ -46,6 +46,261 @@ const LLM_MODEL_STORAGE_KEY = "ziwei.llm.model";
 const LLM_PROXY_ACCESS_KEY_STORAGE_KEY = "ziwei.llm.proxyAccessKey";
 const LEGACY_DEEPSEEK_API_KEY_STORAGE_KEY = "ziwei.deepseek.apiKey";
 const LEGACY_DEEPSEEK_MODEL_STORAGE_KEY = "ziwei.deepseek.model";
+const DASHBOARD_SESSION_STORAGE_KEY = "ziwei.dashboard.adminSession";
+const DEFAULT_WORKER_BASE_URL = "https://api.tanxj.xyz";
+const ADMIN_LOGIN_ENDPOINT =
+  import.meta.env.VITE_ADMIN_LOGIN_URL ||
+  `${workerBaseUrl()}/api/admin/login`;
+const ADMIN_STATS_ENDPOINT =
+  import.meta.env.VITE_ADMIN_STATS_URL ||
+  `${workerBaseUrl()}/api/admin/stats`;
+
+type AdminSession = {
+  token: string;
+  username: string;
+  expiresAt: string;
+};
+
+type AdminStats = {
+  generatedAt?: string;
+  limits?: Record<string, number | string>;
+  today?: Record<string, number>;
+  currentHour?: Record<string, number>;
+  total?: Record<string, number>;
+  last?: Record<string, unknown>;
+  jobTtlSeconds?: number;
+};
+
+function Dashboard() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [session, setSession] = useState<AdminSession | null>(() =>
+    readDashboardSession(),
+  );
+  const [stats, setStats] = useState<AdminStats>();
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [noticeType, setNoticeType] = useState<"success" | "warning" | "error">(
+    "success",
+  );
+
+  const showNotice = (
+    message: string,
+    type: "success" | "warning" | "error" = "success",
+  ) => {
+    setNotice(message);
+    setNoticeType(type);
+  };
+
+  const login = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!username.trim() || !password) {
+      showNotice("请输入管理员用户名和密码。", "warning");
+      return;
+    }
+
+    setLoggingIn(true);
+    showNotice("正在登录管理后台。", "warning");
+
+    try {
+      const response = await fetch(ADMIN_LOGIN_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+          platform: "web",
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(adminLoginErrorMessage(response.status, data));
+      }
+
+      const nextSession: AdminSession = {
+        token: String(data.token || ""),
+        username: String(data.username || username.trim()),
+        expiresAt: String(data.expiresAt || ""),
+      };
+
+      if (!nextSession.token) {
+        throw new Error("管理后台没有返回会话令牌，请确认 Worker 已部署最新版本。");
+      }
+
+      window.localStorage.setItem(
+        DASHBOARD_SESSION_STORAGE_KEY,
+        JSON.stringify(nextSession),
+      );
+      setPassword("");
+      setSession(nextSession);
+      showNotice("管理后台登录成功。");
+      await loadStats(nextSession);
+    } catch (error) {
+      showNotice(
+        error instanceof Error ? error.message : "管理后台登录失败。",
+        "error",
+      );
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
+  const logout = () => {
+    window.localStorage.removeItem(DASHBOARD_SESSION_STORAGE_KEY);
+    setSession(null);
+    setStats(undefined);
+    showNotice("已退出管理后台。");
+  };
+
+  const loadStats = async (targetSession = session) => {
+    if (!targetSession?.token) {
+      showNotice("请先登录管理后台。", "warning");
+      return;
+    }
+
+    setLoadingStats(true);
+    showNotice("正在读取 Worker 使用统计。", "warning");
+
+    try {
+      const response = await fetch(ADMIN_STATS_ENDPOINT, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${targetSession.token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          window.localStorage.removeItem(DASHBOARD_SESSION_STORAGE_KEY);
+          setSession(null);
+        }
+
+        throw new Error(adminStatsErrorMessage(response.status, data));
+      }
+
+      setStats(data);
+      showNotice(`统计已更新：${dashboardDate(data.generatedAt)}`);
+    } catch (error) {
+      showNotice(
+        error instanceof Error ? error.message : "统计读取失败。",
+        "error",
+      );
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session?.token) {
+      void loadStats(session);
+    }
+  }, []);
+
+  return (
+    <main className="dashboard-shell">
+      <section className="dashboard-hero">
+        <div>
+          <span className="eyebrow dark">admin dashboard</span>
+          <h1>谈玄机后台</h1>
+          <p>查看公开生成、完成、失败、限流、Token 和最近任务状态。</p>
+        </div>
+        {session && (
+          <div className="dashboard-session">
+            <span>{session.username}</span>
+            <small>有效期 {dashboardDate(session.expiresAt)}</small>
+          </div>
+        )}
+      </section>
+
+      {!session ? (
+        <form className="dashboard-card dashboard-login" onSubmit={login}>
+          <h2>管理员登录</h2>
+          <p>网页后台使用管理员用户名和密码登录；小程序管理页会额外校验微信身份。</p>
+          <label>
+            <span>用户名</span>
+            <input
+              autoComplete="username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="管理员用户名"
+            />
+          </label>
+          <label>
+            <span>密码</span>
+            <input
+              autoComplete="current-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="管理员密码"
+            />
+          </label>
+          <button type="submit" disabled={loggingIn}>
+            {loggingIn ? "登录中" : "登录"}
+          </button>
+        </form>
+      ) : (
+        <section className="dashboard-grid">
+          <div className="dashboard-card dashboard-toolbar">
+            <div>
+              <h2>使用统计</h2>
+              <p>{stats ? `生成时间 ${dashboardDate(stats.generatedAt)}` : "暂无统计数据"}</p>
+            </div>
+            <div>
+              <button
+                className="secondary-dashboard-button"
+                type="button"
+                disabled={loadingStats}
+                onClick={() => void loadStats()}
+              >
+                {loadingStats ? "刷新中" : "刷新"}
+              </button>
+              <button
+                className="secondary-dashboard-button"
+                type="button"
+                onClick={logout}
+              >
+                退出
+              </button>
+            </div>
+          </div>
+
+          <div className="dashboard-stats">
+            {dashboardStatCards(stats).map((card) => (
+              <article className="dashboard-stat-card" key={card.label}>
+                <span>{card.label}</span>
+                <strong>{card.value}</strong>
+                <small>{card.subtext}</small>
+              </article>
+            ))}
+          </div>
+
+          <div className="dashboard-card dashboard-meta">
+            <h2>接口与限制</h2>
+            {dashboardMetaRows(stats).map((row) => (
+              <div className="dashboard-meta-row" key={row.label}>
+                <span>{row.label}</span>
+                <strong>{row.value}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {notice && (
+        <div className={`dashboard-notice ${noticeType}`} role="status">
+          {notice}
+        </div>
+      )}
+    </main>
+  );
+}
 
 function App() {
   const [activeView, setActiveView] = useState<ActiveView>("ziwei");
@@ -1050,6 +1305,187 @@ function deepSeekProgressPercent(elapsedSeconds: number): number {
   return 94;
 }
 
+function workerBaseUrl(): string {
+  const configuredBase = import.meta.env.VITE_WORKER_BASE_URL;
+
+  if (configuredBase) {
+    return trimTrailingSlash(String(configuredBase));
+  }
+
+  const proxyUrl =
+    import.meta.env.VITE_LLM_PROXY_URL ||
+    import.meta.env.VITE_DEEPSEEK_PROXY_URL;
+
+  if (proxyUrl && /^https?:\/\//i.test(proxyUrl)) {
+    try {
+      return new URL(proxyUrl).origin;
+    } catch {
+      return DEFAULT_WORKER_BASE_URL;
+    }
+  }
+
+  return DEFAULT_WORKER_BASE_URL;
+}
+
+function readDashboardSession(): AdminSession | null {
+  const raw = window.localStorage.getItem(DASHBOARD_SESSION_STORAGE_KEY);
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const session = JSON.parse(raw) as AdminSession;
+
+    if (!session.token) {
+      return null;
+    }
+
+    if (session.expiresAt && Date.parse(session.expiresAt) <= Date.now()) {
+      window.localStorage.removeItem(DASHBOARD_SESSION_STORAGE_KEY);
+      return null;
+    }
+
+    return session;
+  } catch {
+    window.localStorage.removeItem(DASHBOARD_SESSION_STORAGE_KEY);
+    return null;
+  }
+}
+
+function dashboardStatCards(stats?: AdminStats) {
+  const today = stats?.today || {};
+  const hour = stats?.currentHour || {};
+  const total = stats?.total || {};
+
+  return [
+    {
+      label: "今日公开生成",
+      value: dashboardNumber(today.publicCreateJob),
+      subtext: `本小时 ${dashboardNumber(hour.publicCreateJob)} / 总计 ${dashboardNumber(total.publicCreateJob)}`,
+    },
+    {
+      label: "今日完成",
+      value: dashboardNumber(today.completedJobs),
+      subtext: `本小时 ${dashboardNumber(hour.completedJobs)} / 总计 ${dashboardNumber(total.completedJobs)}`,
+    },
+    {
+      label: "今日失败",
+      value: dashboardNumber(today.failedJobs),
+      subtext: `LLM 错误 ${dashboardNumber(today.llmError)} / 总计 ${dashboardNumber(total.failedJobs)}`,
+    },
+    {
+      label: "今日限流",
+      value: dashboardNumber(today.rateLimited),
+      subtext: `本小时 ${dashboardNumber(hour.rateLimited)} / 总计 ${dashboardNumber(total.rateLimited)}`,
+    },
+    {
+      label: "无效密钥",
+      value: dashboardNumber(today.invalidKey),
+      subtext: `本小时 ${dashboardNumber(hour.invalidKey)} / 总计 ${dashboardNumber(total.invalidKey)}`,
+    },
+    {
+      label: "今日 Token",
+      value: dashboardNumber(today.totalTokens),
+      subtext: `输入 ${dashboardNumber(today.promptTokens)} / 输出 ${dashboardNumber(today.completionTokens)}`,
+    },
+  ];
+}
+
+function dashboardMetaRows(stats?: AdminStats) {
+  const limits = stats?.limits || {};
+  const last = stats?.last || {};
+
+  return [
+    {
+      label: "公开限流",
+      value: `每小时 ${limits.publicHourly || "-"} 次 / 每日 ${limits.publicDaily || "-"} 次 / IP 每日 ${limits.publicIpDaily || "-"}`,
+    },
+    {
+      label: "公开任务接口",
+      value: `${workerBaseUrl()}/api/llm/public/jobs`,
+    },
+    {
+      label: "管理登录接口",
+      value: ADMIN_LOGIN_ENDPOINT,
+    },
+    {
+      label: "管理统计接口",
+      value: ADMIN_STATS_ENDPOINT,
+    },
+    {
+      label: "最近完成",
+      value: dashboardLastEvent(last.completedJob),
+    },
+    {
+      label: "最近失败",
+      value: dashboardLastEvent(last.failedJob),
+    },
+    {
+      label: "最近限流",
+      value: dashboardLastEvent(last.rateLimited),
+    },
+  ];
+}
+
+function dashboardLastEvent(value: unknown): string {
+  if (!value || typeof value !== "object") {
+    return "暂无";
+  }
+
+  const event = value as Record<string, string | number | undefined>;
+  const parts = [
+    dashboardDate(event.at),
+    event.channel,
+    event.reason,
+    event.status,
+  ];
+
+  return parts.filter(Boolean).join(" · ") || "暂无";
+}
+
+function dashboardDate(value: unknown): string {
+  if (!value) {
+    return "-";
+  }
+
+  return String(value).replace("T", " ").slice(0, 19);
+}
+
+function dashboardNumber(value: unknown): string {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? String(Math.floor(number)) : "0";
+}
+
+function adminLoginErrorMessage(status: number, data: Record<string, unknown>) {
+  if (status === 401) {
+    return "管理员用户名或密码不正确。";
+  }
+
+  if (status >= 500) {
+    return `管理登录暂时异常（${status}）：${String(data.error || "未知错误")}`;
+  }
+
+  return `管理登录失败（${status}）：${String(data.error || "未知错误")}`;
+}
+
+function adminStatsErrorMessage(status: number, data: Record<string, unknown>) {
+  if (status === 401) {
+    return "管理登录已过期，请重新登录。";
+  }
+
+  if (status >= 500) {
+    return `管理统计暂时异常（${status}）：${String(data.error || "未知错误")}`;
+  }
+
+  return `管理统计读取失败（${status}）：${String(data.error || "未知错误")}`;
+}
+
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
 function viewTitle(activeView: ActiveView): string {
   if (activeView === "bazi") {
     return "四柱八字";
@@ -1062,4 +1498,10 @@ function viewTitle(activeView: ActiveView): string {
   return "紫微斗数";
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  window.location.pathname.replace(/\/+$/, "") === "/dashboard" ? (
+    <Dashboard />
+  ) : (
+    <App />
+  ),
+);

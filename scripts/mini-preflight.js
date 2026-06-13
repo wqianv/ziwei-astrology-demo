@@ -132,10 +132,13 @@ function checkHomeEntry() {
     "Home page should present the formal user entry and hide development wording",
   );
   passIf(
-    homeWxml.includes("bindlongpress=\"openSettings\"") &&
-      homeJs.includes("openSettings"),
-    "Management backend is retained behind a long-press admin entry",
-    "Home page should retain an admin entry without exposing it as the primary user action",
+    !homeWxml.includes("bindlongpress=\"openSettings\"") &&
+      !homeJs.includes("openSettings") &&
+      homeWxml.includes("使用说明与边界") &&
+      !homeWxml.includes("小程序内生成") &&
+      !homeWxml.includes("传统文化参考"),
+    "Home page has no visible management entry and merges duplicate guide actions",
+    "Home page should hide admin entry and avoid duplicate guide/native actions",
   );
   passIf(
     homeWxml.includes("<ad-custom") &&
@@ -273,29 +276,54 @@ function checkNativeFlow() {
 function checkSettingsFlow() {
   const settingsJs = readText("miniprogram/pages/settings/settings.js");
   const settingsWxml = readText("miniprogram/pages/settings/settings.wxml");
+  const settingsJson = readText("miniprogram/pages/settings/settings.json");
+  const complianceJs = readText("miniprogram/pages/compliance/compliance.js");
+  const complianceWxml = readText("miniprogram/pages/compliance/compliance.wxml");
+
+  passIf(
+    complianceWxml.includes("bindtap=\"handleModelTitleTap\"") &&
+      complianceWxml.includes("模型解读") &&
+      complianceJs.includes("modelTitleTapCount < 7") &&
+      complianceJs.includes("/pages/settings/settings?from=hidden-admin"),
+    "Management backend is hidden behind seven taps on the compliance model heading",
+    "Management backend should not be visible from the home page and should use the hidden compliance trigger",
+  );
+  passIf(
+    settingsJson.includes("管理后台") &&
+      settingsJs.includes("ADMIN_LOGIN_URL") &&
+      settingsJs.includes("wx.login") &&
+      settingsJs.includes("wechatCode") &&
+      settingsJs.includes("Authorization: `Bearer") &&
+      settingsWxml.includes("管理员登录") &&
+      settingsWxml.includes("当前会话") &&
+      !settingsWxml.includes("管理后台密钥") &&
+      !settingsWxml.includes("proxyAccessKey"),
+    "Settings page is gated by admin username/password and WeChat identity",
+    "Settings page should require admin login and should not expose the old backend-key input",
+  );
 
   passIf(
     settingsJs.includes("testBackend") &&
       settingsJs.includes("wx.request") &&
       settingsJs.includes("formatBackendTestError") &&
       settingsWxml.includes("测试后端连接"),
-    "Settings page can test backend connectivity without exposing the key",
+    "Settings page can test backend connectivity through an admin session",
     "Settings page should include a backend connectivity test button and request flow",
   );
   passIf(
     settingsJs.includes("url not in domain list") &&
-      settingsJs.includes("后端访问密钥不正确") &&
+      settingsJs.includes("管理登录已过期") &&
       settingsJs.includes("api.tanxj.xyz"),
-    "Settings backend test explains domain, key, and network failures",
-    "Settings backend test should translate common domain/key/network failures",
+    "Settings backend test explains domain, session, and network failures",
+    "Settings backend test should translate common domain/session/network failures",
   );
   passIf(
     settingsJs.includes("copyDiagnostics") &&
       settingsJs.includes("Secret included: no") &&
       settingsWxml.includes("复制诊断信息") &&
-      settingsWxml.includes("诊断信息不包含密钥"),
+      settingsWxml.includes("诊断信息不包含密码"),
     "Settings page can copy a secret-free diagnostic report",
-    "Settings page should copy diagnostics without exposing backend secrets",
+    "Settings page should copy diagnostics without exposing passwords, tokens, or backend secrets",
   );
   passIf(
     settingsJs.includes("clearLocalData") &&
@@ -353,6 +381,26 @@ function checkWorkerFlow() {
       worker.includes("failedJobs"),
     "Worker exposes protected admin stats for usage, failures, invalid keys, and rate limits",
     "Worker should expose protected admin stats with failures and rate-limit counters",
+  );
+  passIf(
+    worker.includes("ADMIN_LOGIN_PATH") &&
+      worker.includes("/api/admin/login") &&
+      worker.includes("handleAdminLogin") &&
+      worker.includes("WECHAT_APP_ID") &&
+      worker.includes("WECHAT_APP_SECRET") &&
+      worker.includes("ADMIN_WECHAT_OPENIDS") &&
+      worker.includes("admin-session:") &&
+      worker.includes("Authorization"),
+    "Worker supports username/password admin login with Mini Program WeChat identity binding",
+    "Worker should support admin sessions and Mini Program openid allow-listing",
+  );
+  passIf(
+    worker.includes("ADMIN_LLM_TEST_PATH") &&
+      worker.includes("/api/admin/llm-test") &&
+      worker.includes("handleAdminLlmTest") &&
+      worker.includes("adminSessionOrProxy"),
+    "Worker supports protected admin LLM diagnostics while retaining legacy proxy compatibility",
+    "Worker should provide an admin-session LLM test endpoint and keep legacy protected routes compatible",
   );
   passIf(
     wrangler.includes("PUBLIC_HOURLY_LIMIT") &&
@@ -462,6 +510,8 @@ function checkNativeRuntimeSmoke() {
 function checkWebviewFlow(config) {
   const webviewWxml = readText("miniprogram/pages/webview/webview.wxml");
   const webviewJs = readText("miniprogram/pages/webview/webview.js");
+  const demoMain = readText("demo/main.tsx");
+  const redirects = readText("demo/public/_redirects");
 
   passIf(
     webviewWxml.includes("<web-view"),
@@ -472,6 +522,16 @@ function checkWebviewFlow(config) {
     webviewJs.includes("SITE_URL") && isHttpsUrl(config.SITE_URL),
     "web-view route is constrained to SITE_URL",
     "web-view route should use SITE_URL",
+  );
+  passIf(
+    demoMain.includes("function Dashboard") &&
+      demoMain.includes("DASHBOARD_SESSION_STORAGE_KEY") &&
+      demoMain.includes("ADMIN_LOGIN_ENDPOINT") &&
+      demoMain.includes("ADMIN_STATS_ENDPOINT") &&
+      demoMain.includes('"/dashboard"') &&
+      redirects.includes("/* /index.html 200"),
+    "H5 site includes a protected /dashboard admin route",
+    "H5 site should render a login-gated dashboard at /dashboard with static route fallback",
   );
 }
 
@@ -488,12 +548,13 @@ function buildSampleMarkdownReport(reportSections) {
 
 function checkComplianceCopy() {
   const compliance = readText("miniprogram/pages/compliance/compliance.wxml");
+  const settingsWxml = readText("miniprogram/pages/settings/settings.wxml");
 
   passIf(
     compliance.includes("不构成确定性判断") &&
       compliance.includes("重大决策") &&
       compliance.includes("发送确认") &&
-      compliance.includes("清除本机数据") &&
+      (compliance.includes("清除解读缓存") || settingsWxml.includes("清除本机数据")) &&
       compliance.includes("最近一次解读缓存"),
     "Compliance page covers boundary, major decisions, privacy, and send consent",
     "Compliance page should mention boundary, major decisions, privacy, and send consent",
@@ -590,29 +651,29 @@ function checkDevToolsHelper(packageJson) {
     "README should document preview/upload helper commands",
   );
   passIf(
-    fileExists("scripts/mini-phone-qa.js") &&
+      fileExists("scripts/mini-phone-qa.js") &&
       scripts["mini:phone-qa"] === "node scripts/mini-phone-qa.js" &&
       phoneQaScript.includes("findLatestPreview") &&
-      phoneQaScript.includes("Do not paste backend access keys") &&
+      phoneQaScript.includes("Do not paste admin passwords") &&
       readme.includes("npm run mini:phone-qa"),
     "Phone QA helper generates secret-free real-device QA records",
     "Phone QA helper should generate a local QA record without exposing secrets",
   );
   passIf(
-    fileExists("miniprogram/REVIEW_NOTES.md") &&
+      fileExists("miniprogram/REVIEW_NOTES.md") &&
       readme.includes("REVIEW_NOTES.md") &&
       reviewNotes.includes("Suggested Review Comment") &&
       reviewNotes.includes("Reviewer Test Path") &&
-      reviewNotes.includes("Never commit backend access keys"),
+      reviewNotes.includes("Never commit backend keys"),
     "Review notes document submission copy, tester path, and secret boundary",
     "REVIEW_NOTES.md should document review copy, tester path, and secret handling",
   );
   passIf(
-    fileExists("miniprogram/PHONE_QA.md") &&
+      fileExists("miniprogram/PHONE_QA.md") &&
       readme.includes("PHONE_QA.md") &&
       reviewNotes.includes("PHONE_QA.md") &&
       phoneQa.includes("Required Checks") &&
-      phoneQa.includes("Do not paste backend access keys") &&
+      phoneQa.includes("Do not paste admin passwords") &&
       phoneQa.includes("Overall result"),
     "Phone QA template documents real-device checks and secret boundary",
     "PHONE_QA.md should document real-device QA checks and secret handling",

@@ -36,8 +36,9 @@ function main() {
       passed: config.API_URL === `${config.REQUEST_DOMAIN}/api/llm/interpret` &&
         config.LLM_JOB_URL === `${config.REQUEST_DOMAIN}/api/llm/jobs` &&
         config.PUBLIC_LLM_JOB_URL === `${config.REQUEST_DOMAIN}/api/llm/public/jobs` &&
+        config.ADMIN_LOGIN_URL === `${config.REQUEST_DOMAIN}/api/admin/login` &&
         config.ADMIN_STATS_URL === `${config.REQUEST_DOMAIN}/api/admin/stats`,
-      evidence: `${config.API_URL}, ${config.LLM_JOB_URL}, ${config.PUBLIC_LLM_JOB_URL}, ${config.ADMIN_STATS_URL}`,
+      evidence: `${config.API_URL}, ${config.LLM_JOB_URL}, ${config.PUBLIC_LLM_JOB_URL}, ${config.ADMIN_LOGIN_URL}, ${config.ADMIN_STATS_URL}`,
     },
     {
       label: "H5 domain is configured for the web-view path",
@@ -74,9 +75,10 @@ function main() {
     `Confirm ${config.REQUEST_DOMAIN} is accepted as a WeChat request legal domain.`,
     `Confirm ${config.WEBVIEW_DOMAIN} is accepted as a web-view business domain if keeping the H5 route in review.`,
     `Generate one native LLM report through the public Mini Program entry on a phone and verify restore, clear, and copy actions.`,
-    `Long-press the home title to open the management backend.`,
-    `Save the backend access key locally in the management backend.`,
-    `Run backend connectivity and admin stats refresh on a phone.`,
+    `Tap the compliance page model heading seven times to open the management backend.`,
+    `Log in with the admin username/password on the owner WeChat account.`,
+    `Run backend connectivity and admin stats refresh on a phone through the admin session.`,
+    `Open https://www.tanxj.xyz/dashboard and verify username/password login plus stats refresh.`,
     `Upload an experience-version draft only with mini:upload and --confirm-upload.`,
   ];
 

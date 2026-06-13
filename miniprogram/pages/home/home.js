@@ -33,12 +33,6 @@ Page({
     });
   },
 
-  openSettings() {
-    wx.navigateTo({
-      url: "/pages/settings/settings",
-    });
-  },
-
   handleAdLoad() {
     this.setData({
       adHidden: false,

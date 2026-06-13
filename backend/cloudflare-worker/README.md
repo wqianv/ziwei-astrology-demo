@@ -12,8 +12,8 @@ background jobs for slower model calls.
 - A separate proxy access key blocks casual public use of our backend.
 - The Mini Program public entry can use a rate-limited job endpoint without
   asking ordinary users to paste the backend key.
-- Admin stats expose public usage, failures, invalid keys, and rate-limit
-  counts for the management page.
+- Admin login sessions protect usage stats, backend diagnostics, failures,
+  invalid keys, and rate-limit counts for the management page.
 - The frontend can call a same-purpose HTTPS endpoint from GitHub Pages.
 - Mini Program LLM generation can be submitted as a background job and polled
   later instead of holding one long local request open.
@@ -32,7 +32,21 @@ From this folder, set the provider API key and proxy access key:
 ```bash
 npx wrangler secret put LLM_API_KEY
 npx wrangler secret put PROXY_ACCESS_KEY
+npx wrangler secret put ADMIN_USERNAME
+npx wrangler secret put ADMIN_PASSWORD
 ```
+
+For the hidden Mini Program management page, also set WeChat identity binding:
+
+```bash
+npx wrangler secret put WECHAT_APP_ID
+npx wrangler secret put WECHAT_APP_SECRET
+npx wrangler secret put ADMIN_WECHAT_OPENIDS
+```
+
+`ADMIN_WECHAT_OPENIDS` is a comma-separated allowlist. If it is empty, a Mini
+Program admin login with the correct username/password returns the current
+openid once so the owner can copy it into that secret.
 
 Create the job storage and queue once, then paste the returned KV namespace ID
 into `wrangler.jsonc`:
@@ -48,6 +62,7 @@ Optional variables:
 npx wrangler secret put ALLOWED_ORIGIN
 npx wrangler secret put LLM_BASE_URL
 npx wrangler secret put LLM_MODEL
+npx wrangler secret put ADMIN_SESSION_TTL_SECONDS
 ```
 
 Public Mini Program limits can be tuned in `wrangler.jsonc`:
@@ -83,6 +98,8 @@ After deployment, the protected endpoints are:
 POST /api/llm/interpret
 POST /api/llm/jobs
 GET  /api/llm/jobs/{jobId}
+POST /api/admin/login
+POST /api/admin/llm-test
 GET  /api/admin/stats
 ```
 
@@ -96,9 +113,11 @@ GET  /api/llm/public/jobs/{jobId}
 ## Notes
 
 - Do not put `LLM_API_KEY` in any `VITE_*` frontend variable.
-- Do not put `PROXY_ACCESS_KEY` in any `VITE_*` frontend variable. Protected
-  management and legacy endpoints send it as `X-Ziwei-Proxy-Key`; the public
-  Mini Program endpoint uses `X-Ziwei-Client-Id` plus rate limits instead.
+- Do not put `PROXY_ACCESS_KEY`, `ADMIN_PASSWORD`, `WECHAT_APP_SECRET`, or
+  model keys in any `VITE_*` frontend variable. Admin pages use a short-lived
+  bearer session from `/api/admin/login`; legacy protected LLM endpoints still
+  accept `X-Ziwei-Proxy-Key`; the public Mini Program endpoint uses
+  `X-Ziwei-Client-Id` plus rate limits instead.
 - Keep `ALLOWED_ORIGIN` set to the public origins, for example
   `https://wqianv.github.io,https://tanxj.xyz,https://www.tanxj.xyz`.
 - The browser-key mode does not need this worker. This worker is for the

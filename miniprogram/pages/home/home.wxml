@@ -1,7 +1,7 @@
 <view class="page">
   <view class="hero">
     <view class="eyebrow">紫微斗数 · 四柱八字</view>
-    <view class="title" bindlongpress="openSettings">谈玄机</view>
+    <view class="title">谈玄机</view>
     <view class="summary">输入出生日期、时辰和性别，生成命盘摘要，并把传统术语翻译成更容易理解的分项解读。</view>
   </view>
 
@@ -32,15 +32,8 @@
   <view class="panel">
     <view class="row" bindtap="openCompliance">
       <view>
-        <view class="row-title">传统文化参考</view>
-        <view class="row-text">解读不构成确定性判断，重要事项请结合现实信息做决定</view>
-      </view>
-      <view class="chevron">›</view>
-    </view>
-    <view class="row" bindtap="openNativeApp">
-      <view>
-        <view class="row-title">小程序内生成</view>
-        <view class="row-text">出生信息只保存在本机微信，解读按本次问询日期关联保存</view>
+        <view class="row-title">使用说明与边界</view>
+        <view class="row-text">使用说明、隐私说明和模型解读边界</view>
       </view>
       <view class="chevron">›</view>
     </view>

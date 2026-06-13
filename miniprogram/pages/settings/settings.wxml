@@ -2,163 +2,204 @@
   <view class="hero">
     <view class="eyebrow">admin</view>
     <view class="title">管理后台</view>
-    <view class="summary">管理后端密钥、接口诊断、使用统计、失败次数和广告配置状态。</view>
-  </view>
-
-  <view class="panel">
-    <view class="panel-title">使用统计</view>
-    <view class="hint">统计来自 Worker KV，包含公开用户入口的生成、完成、失败、限流和无效密钥次数。</view>
-    <button
-      class="secondary"
-      loading="{{loadingStats}}"
-      disabled="{{loadingStats || !proxyAccessKey}}"
-      bindtap="refreshAdminStats"
-    >
-      刷新统计
-    </button>
-    <view wx:if="{{statsResult}}" class="notice {{statsResultType}}">{{statsResult}}</view>
-
-    <view class="stats-grid">
-      <view class="stat-card" wx:for="{{statsCards}}" wx:key="label">
-        <view class="stat-label">{{item.label}}</view>
-        <view class="stat-value">{{item.value}}</view>
-        <view class="stat-subtext">{{item.subtext}}</view>
-      </view>
-    </view>
-
-    <view class="meta-list">
-      <view class="meta-row" wx:for="{{statsMetaRows}}" wx:key="label">
-        <view class="meta-label">{{item.label}}</view>
-        <view class="meta-value">{{item.value}}</view>
-      </view>
+    <view class="summary">
+      {{adminAuthenticated ? '已进入管理员模式，可查看后端统计、链路诊断和配置状态。' : '管理员入口需要账号密码，并校验当前微信身份。'}}
     </view>
   </view>
 
-  <view class="panel">
-    <view class="panel-title">管理后台密钥</view>
+  <view wx:if="{{!adminAuthenticated}}" class="panel login-panel">
+    <view class="panel-title">管理员登录</view>
+    <view class="hint">需要管理员账号、密码和已绑定的微信身份。</view>
+
     <view class="field">
-      <view class="label">访问管理接口的口令</view>
+      <view class="label">用户名</view>
+      <input
+        class="key-input"
+        value="{{adminUsername}}"
+        placeholder="管理员用户名"
+        bindinput="handleAdminUsernameInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="label">密码</view>
       <input
         class="key-input"
         password
-        value="{{proxyAccessKey}}"
-        placeholder="粘贴管理后台密钥"
-        bindinput="handleProxyKeyInput"
+        value="{{adminPassword}}"
+        placeholder="管理员密码"
+        bindinput="handleAdminPasswordInput"
       />
     </view>
-    <view class="hint">密钥只保存在当前微信本机存储里；普通用户生成解读不需要填写这个密钥。</view>
 
-    <button class="primary" disabled="{{!proxyAccessKey}}" bindtap="saveProxyKey">保存到本机微信</button>
-    <button wx:if="{{proxyKeySaved}}" class="secondary" bindtap="clearProxyKey">清除本机密钥</button>
     <button
-      class="secondary"
-      loading="{{testingBackend}}"
-      disabled="{{testingBackend || !proxyAccessKey}}"
-      bindtap="testBackend"
+      class="primary"
+      loading="{{loggingIn}}"
+      disabled="{{loggingIn || !adminUsername || !adminPassword}}"
+      bindtap="submitAdminLogin"
     >
-      测试后端连接
+      登录管理后台
     </button>
-    <view class="hint">测试会发送一次最小提示词到 Worker 和模型服务，用于确认合法域名、访问密钥和后端链路是否正常。</view>
 
-    <view wx:if="{{notice}}" class="notice {{noticeType}}">{{notice}}</view>
-    <view wx:if="{{backendTestResult}}" class="notice {{backendTestType}}">{{backendTestResult}}</view>
+    <view wx:if="{{loginResult}}" class="notice {{loginResultType}}">{{loginResult}}</view>
     <button class="secondary compact-action" bindtap="copyDiagnostics">复制诊断信息</button>
-    <view class="hint">诊断信息不包含密钥，只包含域名、接口、密钥保存状态和后端测试结果。</view>
   </view>
 
-  <view class="panel">
-    <view class="panel-title">微信平台域名</view>
-
-    <view class="domain-row">
-      <view class="domain-main">
-        <view class="domain-title">request 合法域名</view>
-        <view class="domain-value">{{requestDomain}}</view>
+  <block wx:else>
+    <view class="panel">
+      <view class="panel-title">当前会话</view>
+      <view class="meta-list">
+        <view class="meta-row">
+          <view class="meta-label">管理员</view>
+          <view class="meta-value">{{adminUsername || '-'}}</view>
+        </view>
+        <view class="meta-row">
+          <view class="meta-label">微信身份</view>
+          <view class="meta-value">{{adminOpenidMasked || '已校验'}}</view>
+        </view>
+        <view class="meta-row">
+          <view class="meta-label">会话有效期</view>
+          <view class="meta-value">{{adminSessionExpiresAt || '-'}}</view>
+        </view>
       </view>
-      <button class="copy-button" data-value="{{requestDomain}}" bindtap="copyValue">复制</button>
+      <view wx:if="{{loginResult}}" class="notice {{loginResultType}}">{{loginResult}}</view>
+      <view class="button-row">
+        <button class="secondary compact-action" loading="{{loadingStats}}" bindtap="refreshAdminStats">刷新统计</button>
+        <button class="secondary compact-action" bindtap="logoutAdmin">退出登录</button>
+      </view>
     </view>
 
-    <view class="domain-row">
-      <view class="domain-main">
-        <view class="domain-title">web-view 业务域名</view>
-        <view class="domain-value">{{webviewDomain}}</view>
+    <view class="panel">
+      <view class="panel-title">使用统计</view>
+      <view class="hint">统计来自 Worker KV，包含公开用户入口的生成、完成、失败、限流和无效密钥次数。</view>
+      <button
+        class="secondary"
+        loading="{{loadingStats}}"
+        disabled="{{loadingStats}}"
+        bindtap="refreshAdminStats"
+      >
+        刷新统计
+      </button>
+      <view wx:if="{{statsResult}}" class="notice {{statsResultType}}">{{statsResult}}</view>
+
+      <view class="stats-grid">
+        <view class="stat-card" wx:for="{{statsCards}}" wx:key="label">
+          <view class="stat-label">{{item.label}}</view>
+          <view class="stat-value">{{item.value}}</view>
+          <view class="stat-subtext">{{item.subtext}}</view>
+        </view>
       </view>
-      <button class="copy-button" data-value="{{webviewDomain}}" bindtap="copyValue">复制</button>
+
+      <view class="meta-list">
+        <view class="meta-row" wx:for="{{statsMetaRows}}" wx:key="label">
+          <view class="meta-label">{{item.label}}</view>
+          <view class="meta-value">{{item.value}}</view>
+        </view>
+      </view>
     </view>
 
-    <view class="domain-row">
-      <view class="domain-main">
-        <view class="domain-title">LLM 请求接口</view>
-        <view class="domain-value">{{apiUrl}}</view>
-      </view>
-      <button class="copy-button" data-value="{{apiUrl}}" bindtap="copyValue">复制</button>
+    <view class="panel">
+      <view class="panel-title">后端链路诊断</view>
+      <view class="hint">测试会发送一次最小提示词到 Worker 和模型服务，用于确认合法域名、管理会话和模型链路是否正常。</view>
+      <button
+        class="secondary"
+        loading="{{testingBackend}}"
+        disabled="{{testingBackend}}"
+        bindtap="testBackend"
+      >
+        测试后端连接
+      </button>
+      <view wx:if="{{backendTestResult}}" class="notice {{backendTestType}}">{{backendTestResult}}</view>
+      <button class="secondary compact-action" bindtap="copyDiagnostics">复制诊断信息</button>
+      <view class="hint">诊断信息不包含密码、会话令牌或任何模型密钥。</view>
     </view>
 
-    <view class="domain-row">
-      <view class="domain-main">
-        <view class="domain-title">LLM 后台任务接口</view>
-        <view class="domain-value">{{llmJobUrl}}</view>
+    <view class="panel">
+      <view class="panel-title">微信平台域名</view>
+
+      <view class="domain-row">
+        <view class="domain-main">
+          <view class="domain-title">request 合法域名</view>
+          <view class="domain-value">{{requestDomain}}</view>
+        </view>
+        <button class="copy-button" data-value="{{requestDomain}}" bindtap="copyValue">复制</button>
       </view>
-      <button class="copy-button" data-value="{{llmJobUrl}}" bindtap="copyValue">复制</button>
+
+      <view class="domain-row">
+        <view class="domain-main">
+          <view class="domain-title">web-view 业务域名</view>
+          <view class="domain-value">{{webviewDomain}}</view>
+        </view>
+        <button class="copy-button" data-value="{{webviewDomain}}" bindtap="copyValue">复制</button>
+      </view>
+
+      <view class="domain-row">
+        <view class="domain-main">
+          <view class="domain-title">公开任务接口</view>
+          <view class="domain-value">{{publicLlmJobUrl}}</view>
+        </view>
+        <button class="copy-button" data-value="{{publicLlmJobUrl}}" bindtap="copyValue">复制</button>
+      </view>
+
+      <view class="domain-row">
+        <view class="domain-main">
+          <view class="domain-title">管理登录接口</view>
+          <view class="domain-value">{{adminLoginUrl}}</view>
+        </view>
+        <button class="copy-button" data-value="{{adminLoginUrl}}" bindtap="copyValue">复制</button>
+      </view>
+
+      <view class="domain-row">
+        <view class="domain-main">
+          <view class="domain-title">管理统计接口</view>
+          <view class="domain-value">{{adminStatsUrl}}</view>
+        </view>
+        <button class="copy-button" data-value="{{adminStatsUrl}}" bindtap="copyValue">复制</button>
+      </view>
     </view>
 
-    <view class="domain-row">
-      <view class="domain-main">
-        <view class="domain-title">公开用户任务接口</view>
-        <view class="domain-value">{{publicLlmJobUrl}}</view>
+    <view class="panel">
+      <view class="panel-title">广告配置</view>
+      <view class="hint">{{adStatusText}}</view>
+      <view class="domain-row">
+        <view class="domain-main">
+          <view class="domain-title">原生模板广告 unit-id</view>
+          <view class="domain-value">{{adCustomUnitId || '未配置'}}</view>
+        </view>
+        <button class="copy-button" data-value="{{adCustomUnitId}}" disabled="{{!adCustomUnitId}}" bindtap="copyValue">复制</button>
       </view>
-      <button class="copy-button" data-value="{{publicLlmJobUrl}}" bindtap="copyValue">复制</button>
+      <view class="domain-row">
+        <view class="domain-main">
+          <view class="domain-title">Banner 广告 unit-id</view>
+          <view class="domain-value">{{adBannerUnitId || '未配置'}}</view>
+        </view>
+        <button class="copy-button" data-value="{{adBannerUnitId}}" disabled="{{!adBannerUnitId}}" bindtap="copyValue">复制</button>
+      </view>
+      <view class="hint">广告单元 ID 需要在微信小程序后台的流量主模块创建；无广告返回时前台会自动隐藏广告区域。</view>
     </view>
 
-    <view class="domain-row">
-      <view class="domain-main">
-        <view class="domain-title">管理统计接口</view>
-        <view class="domain-value">{{adminStatsUrl}}</view>
-      </view>
-      <button class="copy-button" data-value="{{adminStatsUrl}}" bindtap="copyValue">复制</button>
+    <view class="panel">
+      <view class="panel-title">本机数据管理</view>
+      <view class="hint">清除当前微信本机保存的管理会话、旧版访问密钥、出生信息、发送确认、后台任务、匿名本机标识和解读历史；不会影响 Cloudflare、微信后台或服务器配置。</view>
+      <button class="danger-button" bindtap="clearLocalData">清除本机数据</button>
     </view>
-  </view>
 
-  <view class="panel">
-    <view class="panel-title">广告配置</view>
-    <view class="hint">{{adStatusText}}</view>
-    <view class="domain-row">
-      <view class="domain-main">
-        <view class="domain-title">原生模板广告 unit-id</view>
-        <view class="domain-value">{{adCustomUnitId || '未配置'}}</view>
+    <view class="panel">
+      <view class="panel-title">下一步测试</view>
+      <view class="row" bindtap="openNativeApp">
+        <view>
+          <view class="row-title">回到谈玄机排盘</view>
+          <view class="row-text">用公开任务接口生成一次命盘解读</view>
+        </view>
+        <view class="chevron">›</view>
       </view>
-      <button class="copy-button" data-value="{{adCustomUnitId}}" disabled="{{!adCustomUnitId}}" bindtap="copyValue">复制</button>
-    </view>
-    <view class="domain-row">
-      <view class="domain-main">
-        <view class="domain-title">Banner 广告 unit-id</view>
-        <view class="domain-value">{{adBannerUnitId || '未配置'}}</view>
+      <view class="row" bindtap="openCompliance">
+        <view>
+          <view class="row-title">使用说明与边界</view>
+          <view class="row-text">查看隐私、娱乐参考与模型解读边界文案</view>
+        </view>
+        <view class="chevron">›</view>
       </view>
-      <button class="copy-button" data-value="{{adBannerUnitId}}" disabled="{{!adBannerUnitId}}" bindtap="copyValue">复制</button>
     </view>
-    <view class="hint">广告单元 ID 需要在微信小程序后台的流量主模块创建；无广告返回时前台会自动隐藏广告区域。</view>
-  </view>
-
-  <view class="panel">
-    <view class="panel-title">本机数据管理</view>
-    <view class="hint">清除当前微信本机保存的访问密钥、出生信息、发送确认、后台任务和解读历史；不会影响 Cloudflare、微信后台或服务器配置。</view>
-    <button class="danger-button" bindtap="clearLocalData">清除本机数据</button>
-  </view>
-
-  <view class="panel">
-    <view class="panel-title">下一步测试</view>
-    <view class="row" bindtap="openNativeApp">
-      <view>
-        <view class="row-title">回到原生排盘</view>
-        <view class="row-text">用已保存密钥并勾选发送确认，生成一次 LLM 解读</view>
-      </view>
-      <view class="chevron">›</view>
-    </view>
-    <view class="row" bindtap="openCompliance">
-      <view>
-        <view class="row-title">合规说明</view>
-        <view class="row-text">查看隐私、娱乐参考与使用边界文案</view>
-      </view>
-      <view class="chevron">›</view>
-    </view>
-  </view>
+  </block>
 </view>

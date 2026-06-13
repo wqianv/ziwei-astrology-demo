@@ -1,7 +1,7 @@
 <view class="page">
   <view class="hero">
-    <view class="eyebrow">native mini program</view>
-    <view class="title">原生排盘</view>
+    <view class="eyebrow">ziwei chart</view>
+    <view class="title">谈玄机排盘</view>
     <view class="summary">出生信息、四柱摘要、紫微十二宫和命盘解读都在小程序内完成；网页版完整盘继续保留用于校验。</view>
   </view>
 
@@ -264,7 +264,7 @@
     <view class="section-card" wx:for="{{sections}}" wx:key="id">
       <view class="section-title">{{item.title}}</view>
       <view wx:if="{{item.hasContent}}" class="section-content">{{item.content}}</view>
-      <view wx:else class="section-empty">生成后会填入这一节。原生版已接入紫微与四柱摘要，完整盘面仍可查看网页版。</view>
+      <view wx:else class="section-empty">生成后会填入这一节。</view>
     </view>
   </view>
 

@@ -9,9 +9,9 @@ flow for the core chart and LLM report experience.
 - Formal native home page with user entry actions and optional WeChat native ads.
 - Native birth form, iztro-backed Ziwei/Four-Pillars summary, Worker-backed LLM
   request, and sectioned report display.
-- Hidden management page for local admin key management, launch-domain checks,
-  backend connectivity test, Worker usage stats, failure counts, rate-limit
-  counts, and ad configuration status.
+- Hidden management page gated by admin username/password and owner WeChat identity,
+  with launch-domain checks, backend connectivity test, Worker usage stats,
+  failure counts, rate-limit counts, and ad configuration status.
 - `web-view` page that opens the production H5 app for the complete Ziwei chart.
 - Share entry through the home page and the web-view page.
 - Compliance and usage-boundary page for review-friendly wording.
@@ -30,14 +30,13 @@ flow for the core chart and LLM report experience.
 5. Run the home page, then tap `开始排盘`.
 6. Confirm the send-consent checkbox and generate one native LLM report through
    the public rate-limited job endpoint.
-7. Long-press the home title to open `管理后台`.
-8. Save the backend access key on the management page.
-9. Tap `测试后端连接` to verify the request legal domain, backend access key,
-   Worker, and model link.
+7. Open `使用说明`, tap the `模型解读` heading seven times, then log in to `管理后台` with the admin account on the owner WeChat account.
+8. Tap `测试后端连接` to verify the request legal domain, admin session, Worker, and model link.
+9. Tap `刷新统计` to verify Worker usage, failure, invalid-key, and rate-limit stats.
 10. If the backend test fails on a phone, tap `复制诊断信息`. The copied text does
-   not include the backend access key.
-11. Use `清除本机数据` on the management page when you need to reset local key,
-    client id, birth profile, consent, and latest report cache.
+   not include passwords, session tokens, backend keys, or model keys.
+11. Use `清除本机数据` on the management page when you need to reset local
+    admin session, client id, birth profile, consent, and latest report cache.
 
 ## Required WeChat platform settings
 
@@ -58,8 +57,8 @@ The H5 app calls the Worker at `https://api.tanxj.xyz` from inside the web-view.
 Keep the Worker CORS allowlist aligned with the production frontend domain.
 The native Mini Program request normally sends no browser `Origin`; the current
 Worker accepts requests without an `Origin` header and still requires
-`X-Ziwei-Client-Id` for the public Mini Program job endpoint. Protected
-management endpoints still require `X-Ziwei-Proxy-Key`.
+`X-Ziwei-Client-Id` for the public Mini Program job endpoint. Management endpoints use an admin session from `/api/admin/login`; legacy protected
+LLM endpoints still accept `X-Ziwei-Proxy-Key` for compatibility.
 
 If备案 or account subject verification blocks `web-view`, the native flow can
 still continue independently once the request legal domain is accepted. The H5
@@ -86,9 +85,9 @@ without opening the H5 app:
 8. Sectioned LLM report display.
 9. LLM report history cached in local WeChat storage by birth profile plus
    query date, capped to the latest 8 reports, with a clear action on the native
-   page. The cache does not store the backend access key.
+   page. The cache does not store the backend or model secret.
 10. Copy action for the latest native LLM report, including a usage-boundary
-    note and no backend access key.
+    note and no backend or model secret.
 
 Regenerate the vendor bundle after upgrading `iztro`:
 
@@ -149,7 +148,7 @@ npm run mini:phone-qa
 
 The record is written to `/tmp/ziwei-mini-devtools/phone-qa-*.md` and pre-fills
 the current Git commit plus the latest preview QR path. It is a local testing
-artifact; do not paste backend access keys, model API keys, or other secrets
+artifact; do not paste backend or model secrets, model API keys, or other secrets
 into it.
 
 Upload an experience-version draft only when you are ready to create a new
@@ -179,13 +178,14 @@ and useful for cross-checking during the备案 path.
 
 ## Current verification snapshot
 
-As of 2026-06-12 on `main`:
+As of 2026-06-13 on `codex/admin-gate-dashboard`:
 
-- `npm run mini:preflight` passes with 80 checks.
+- `npm run mini:preflight` passes with 102 checks.
 - `npm run mini:readiness` passes all project-internal gates.
 - `npm run mini:domain-check` confirms the H5 domain returns HTTPS 200 and the
-  protected Worker route returns HTTP 401 without the backend access key.
-- `npm run demo:build` passes for the retained H5/备案 route.
+  protected Worker route returns HTTP 401 without the backend or model secret.
+- `npm run demo:build` passes for the retained H5/备案 route and
+  `/dashboard` admin route.
 - `npm run mini:release-check -- --require-clean` passes locally.
 - `npm run mini:preview` generated a WeChat preview package of about 540 KB.
 - `npm run mini:phone-qa` generates a local real-device QA record with the
@@ -199,6 +199,7 @@ As of 2026-06-12 on `main`:
   reachable and key-protected.
 - `https://api.tanxj.xyz/api/llm/public/jobs` is the public Mini Program job
   endpoint and is rate-limited by local client id plus coarse IP bucket.
+- `https://www.tanxj.xyz/dashboard` is the login-gated web admin dashboard.
 
 The latest local preview QR is written under:
 
@@ -230,18 +231,16 @@ The preview command prints the exact QR and metadata paths after it succeeds.
 - [ ] Configure `https://www.tanxj.xyz` as web-view business domain.
 - [ ] Add any WeChat domain verification file to the production H5 root if
       requested by the platform.
-- [ ] Long-press the home title to open `管理后台`.
-- [ ] Save the backend access key in `管理后台`.
-- [ ] Run `测试后端连接` and `刷新统计` successfully on a phone.
-- [ ] Confirm `清除本机数据` removes local key, client id, birth profile, send
+- [ ] Open `使用说明`, tap `模型解读` seven times, and log in to `管理后台` on the owner WeChat account.
+- [ ] Run `测试后端连接` and `刷新统计` successfully on a phone through the admin session.
+- [ ] Confirm `清除本机数据` removes local admin session, client id, birth profile, send
       consent, and latest report cache.
 - [ ] Confirm birth date, birth time, and gender restore after reopening and can
       be reset locally.
 - [ ] Confirm the native send-consent checkbox before generating an LLM report.
 - [ ] Confirm the latest native LLM report restores after reopening the same
       birth profile and can be cleared locally.
-- [ ] Confirm the native LLM report can be copied and does not include the
-      backend access key.
+- [ ] Confirm the native LLM report can be copied and does not include backend or model secrets.
 - [ ] Re-test sharing from the home page, native page, and web-view page.
 - [ ] Re-test the native LLM generation path inside WeChat DevTools and on a
       phone.
@@ -257,20 +256,20 @@ Run this after scanning a preview QR or opening an experience version:
   clears the local saved profile.
 - The 4x4 Ziwei board fits the phone width and palace selection updates the
   detail card.
-- Management page saves and clears the backend access key locally.
-- Management page backend test succeeds, or shows a readable domain/key/network
+- Management page uses admin username/password plus owner WeChat identity.
+- Management page backend test succeeds, or shows a readable domain/session/network
   error.
 - Management page can refresh Worker usage/failure/rate-limit statistics.
-- Management page can copy diagnostic text without including the backend access
-  key.
-- Management page `清除本机数据` resets local key, client id, birth profile, send
-  consent, and latest report cache.
+- Management page can copy diagnostic text without including passwords, tokens,
+  backend keys, or model keys.
+- Management page `清除本机数据` resets local admin session, client id, birth
+  profile, send consent, and latest report cache.
 - LLM generation stays disabled until the send-consent checkbox is selected.
 - Slow LLM requests show progress text, and a successful response fills the
   sectioned report cards.
 - Reopening the same birth profile restores the latest local LLM report, and
   `清除本机解读` removes it.
 - `复制解读` copies the sectioned report with a usage-boundary note and no
-  backend access key.
+  backend or model secret.
 - Web-view entry opens `https://www.tanxj.xyz` after the business domain is
   accepted by WeChat.
