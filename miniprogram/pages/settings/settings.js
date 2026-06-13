@@ -94,7 +94,7 @@ Page({
   clearLocalData() {
     wx.showModal({
       title: "清除本机数据",
-      content: "将清除本机保存的后端访问密钥、出生信息、发送确认和最近一次解读缓存。不会影响 Cloudflare、微信后台或服务器数据。",
+      content: "将清除本机保存的后端访问密钥、出生信息、发送确认、后台任务和解读历史。不会影响 Cloudflare、微信后台或服务器数据。",
       confirmText: "清除",
       success: (result) => {
         if (!result.confirm) {

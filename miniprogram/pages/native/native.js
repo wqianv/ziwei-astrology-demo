@@ -21,6 +21,7 @@ const DEFAULT_BIRTH_PROFILE = {
   birthTimeIndex: 1,
   genderIndex: 0,
 };
+const REPORT_HISTORY_LIMIT = 8;
 
 Page({
   data: {
@@ -36,6 +37,7 @@ Page({
     proxyKeySaved: false,
     llmConsentAccepted: false,
     canGenerate: false,
+    queryDate: currentQueryDate(),
     ziweiBoardExpanded: false,
     palaceDetailsExpanded: false,
     loading: false,
@@ -262,12 +264,18 @@ Page({
       return;
     }
 
-    const prompt = buildPrompt(this.data.profile);
-    const reportCacheKey = buildReportCacheKey(this.data);
+    const queryDate = currentQueryDate();
+    const reportCacheKey = buildReportCacheKey(this.data, queryDate);
+    const prompt = buildPrompt(this.data.profile, {
+      queryDate,
+      generatedAt: new Date().toISOString(),
+      timezone: "Asia/Shanghai",
+    });
     const startedAt = new Date().toISOString();
     let jobAccepted = false;
 
     this.setData({
+      queryDate,
       loading: true,
       elapsedSeconds: 0,
       generateButtonText: "提交后台任务",
@@ -319,6 +327,8 @@ Page({
         saveActiveReportJob({
           jobId,
           key: reportCacheKey,
+          birthKey: buildBirthCacheKey(this.data),
+          queryDate,
           startedAt,
         });
         this.setData({
@@ -343,6 +353,8 @@ Page({
   },
 
   pollReportJob(accessKey, reportCacheKey, jobId) {
+    const queryDate = queryDateFromReportKey(reportCacheKey) || currentQueryDate();
+
     wx.request({
       url: `${LLM_JOB_URL}/${encodeURIComponent(jobId)}`,
       method: "GET",
@@ -361,9 +373,12 @@ Page({
         if (data.status === "done") {
           this.applyReportData({
             accessKey,
-            data,
+            data: {
+              ...data,
+              queryDate,
+            },
             reportCacheKey,
-            cachedReportNotice: "后台任务已完成，并保存到本机微信。",
+            cachedReportNotice: `已保存到本机微信，关联查询日期 ${queryDate}。`,
           });
           return;
         }
@@ -412,6 +427,7 @@ Page({
   },
 
   applyReportData({ accessKey, data, reportCacheKey, cachedReportNotice }) {
+    const queryDate = data.queryDate || queryDateFromReportKey(reportCacheKey) || currentQueryDate();
     const parsed = parseLLMReport(data.content || "");
     const usage = data.usage || {};
     const reportMeta = `${data.model || "llm"} · 后台生成`;
@@ -422,6 +438,8 @@ Page({
       : "";
     const reportCache = {
       key: reportCacheKey,
+      birthKey: birthKeyFromReportKey(reportCacheKey),
+      queryDate,
       savedAt: new Date().toISOString(),
       sections: parsed.sections,
       reportMeta,
@@ -435,7 +453,7 @@ Page({
     this.stopTimer();
     this.stopJobPoller();
 
-    if (buildReportCacheKey(this.data) !== reportCacheKey) {
+    if (buildReportCacheKey(this.data, currentQueryDate()) !== reportCacheKey) {
       this.setData({
         loading: false,
         activeJobId: "",
@@ -461,6 +479,7 @@ Page({
       proxyKeySaved: true,
       loading: false,
       activeJobId: "",
+      queryDate,
       canGenerate: canGenerateReport({
         accessKey,
         consentAccepted: this.data.llmConsentAccepted,
@@ -474,11 +493,12 @@ Page({
   resumeActiveReportJob() {
     const activeJob = readActiveReportJob();
     const accessKey = this.data.proxyAccessKey.trim();
+    const queryDate = currentQueryDate();
 
     if (
       !activeJob ||
       !activeJob.jobId ||
-      activeJob.key !== buildReportCacheKey(this.data) ||
+      activeJob.key !== buildReportCacheKey(this.data, queryDate) ||
       this.data.loading
     ) {
       return;
@@ -499,6 +519,7 @@ Page({
     const elapsedSeconds = elapsedSecondsSince(activeJob.startedAt);
 
     this.setData({
+      queryDate,
       loading: true,
       elapsedSeconds,
       generateButtonText: `后台生成中 ${elapsedSeconds}s`,
@@ -526,11 +547,12 @@ Page({
     const selectedPalace =
       findPalaceByName(profile.ziwei.palaces, previousPalaceName) ||
       profile.ziwei.mingPalace;
+    const queryDate = currentQueryDate();
     const cachedReport = readReportCache(buildReportCacheKey({
       birthDate: this.data.birthDate,
       birthTimeIndex: this.data.birthTimeIndex,
       genderIndex: this.data.genderIndex,
-    }));
+    }, queryDate));
     const reportState = cachedReport
       ? {
           hasReport: true,
@@ -538,7 +560,7 @@ Page({
           reportMeta: cachedReport.reportMeta,
           usageText: cachedReport.usageText,
           matchedCount: cachedReport.matchedCount,
-          cachedReportNotice: `已恢复本机保存的上次解读：${formatSavedAt(cachedReport.savedAt)}`,
+          cachedReportNotice: `已恢复 ${cachedReport.queryDate || queryDate} 的本机解读：${formatSavedAt(cachedReport.savedAt)}`,
         }
       : {
           hasReport: false,
@@ -553,6 +575,7 @@ Page({
 
     this.setData({
       profile,
+      queryDate,
       localCards,
       summaryRows: buildSummaryRows(localCards),
       ziweiPalaces: profile.ziwei.palaces,
@@ -570,7 +593,7 @@ Page({
   clearCachedReport() {
     wx.showModal({
       title: "清除本机解读",
-      content: "只会清除当前小程序本机保存的最近一次解读结果，不会清除后端访问密钥。",
+      content: "会清除当前小程序本机保存的解读历史，不会清除后端访问密钥。",
       confirmText: "清除",
       success: (result) => {
         if (!result.confirm) {
@@ -716,37 +739,92 @@ function writeBirthProfile({ birthDate, birthTimeIndex, genderIndex }) {
   });
 }
 
-function buildReportCacheKey({ birthDate, birthTimeIndex, genderIndex }) {
+function buildBirthCacheKey({ birthDate, birthTimeIndex, genderIndex }) {
   const option = baseGenderOptions[Number(genderIndex)] || baseGenderOptions[0];
 
   return `${birthDate}|${birthTimeIndex}|${option.value}`;
 }
 
+function buildReportCacheKey(profile, queryDate) {
+  return `${buildBirthCacheKey(profile)}|query:${queryDate || currentQueryDate()}`;
+}
+
 function saveReportCache(cache) {
+  const history = readReportHistory();
+  const nextItems = [
+    {
+      key: cache.key,
+      birthKey: cache.birthKey || birthKeyFromReportKey(cache.key),
+      queryDate: cache.queryDate || queryDateFromReportKey(cache.key) || currentQueryDate(),
+      savedAt: cache.savedAt,
+      sections: cache.sections,
+      reportMeta: cache.reportMeta,
+      usageText: cache.usageText,
+      matchedCount: cache.matchedCount,
+    },
+    ...history.items.filter((item) => item.key !== cache.key),
+  ].slice(0, REPORT_HISTORY_LIMIT);
+
   wx.setStorageSync(LLM_REPORT_STORAGE, {
-    key: cache.key,
-    savedAt: cache.savedAt,
-    sections: cache.sections,
-    reportMeta: cache.reportMeta,
-    usageText: cache.usageText,
-    matchedCount: cache.matchedCount,
+    version: 2,
+    updatedAt: new Date().toISOString(),
+    items: nextItems,
   });
 }
 
 function readReportCache(key) {
+  return readReportHistory().items.find((item) =>
+    item.key === key && Array.isArray(item.sections),
+  ) || null;
+}
+
+function readReportHistory() {
   const cached = wx.getStorageSync(LLM_REPORT_STORAGE);
 
-  if (!cached || cached.key !== key || !Array.isArray(cached.sections)) {
-    return null;
+  if (!cached || typeof cached !== "object") {
+    return {
+      version: 2,
+      items: [],
+    };
   }
 
-  return cached;
+  if (Array.isArray(cached.items)) {
+    return {
+      version: 2,
+      items: cached.items.filter((item) => item && item.key && Array.isArray(item.sections)),
+    };
+  }
+
+  if (cached.key && Array.isArray(cached.sections)) {
+    return {
+      version: 1,
+      items: [
+        {
+          key: cached.key,
+          birthKey: birthKeyFromReportKey(cached.key),
+          queryDate: queryDateFromReportKey(cached.key),
+          savedAt: cached.savedAt,
+          sections: cached.sections,
+          reportMeta: cached.reportMeta,
+          usageText: cached.usageText,
+          matchedCount: cached.matchedCount,
+        },
+      ],
+    };
+  }
+
+  return {
+    version: 2,
+    items: [],
+  };
 }
 
 function saveActiveReportJob(job) {
   wx.setStorageSync(LLM_JOB_STORAGE, {
     jobId: job.jobId,
     key: job.key,
+    birthKey: job.birthKey,
+    queryDate: job.queryDate,
     startedAt: job.startedAt,
   });
 }
@@ -760,6 +838,8 @@ function readActiveReportJob() {
 
   const jobId = String(job.jobId || "");
   const key = String(job.key || "");
+  const birthKey = String(job.birthKey || birthKeyFromReportKey(key) || "");
+  const queryDate = String(job.queryDate || queryDateFromReportKey(key) || "");
   const startedAt = String(job.startedAt || "");
 
   if (!jobId || !key) {
@@ -769,6 +849,8 @@ function readActiveReportJob() {
   return {
     jobId,
     key,
+    birthKey,
+    queryDate,
     startedAt,
   };
 }
@@ -783,6 +865,28 @@ function formatSavedAt(value) {
   }
 
   return String(value).replace("T", " ").slice(0, 16);
+}
+
+function currentQueryDate() {
+  return formatDate(new Date());
+}
+
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function birthKeyFromReportKey(key) {
+  return String(key || "").split("|query:")[0] || "";
+}
+
+function queryDateFromReportKey(key) {
+  const matched = String(key || "").match(/\|query:(\d{4}-\d{2}-\d{2})$/);
+
+  return matched ? matched[1] : "";
 }
 
 function buildReportCopyText(data) {

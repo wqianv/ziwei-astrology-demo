@@ -202,6 +202,11 @@
       </button>
     </view>
 
+    <view class="report-date-row">
+      <view class="report-date-label">本次查询日期</view>
+      <view class="report-date-value">{{queryDate}}</view>
+    </view>
+
     <view wx:if="{{proxyKeySaved}}" class="notice success">{{saveNotice || '已读取本机保存的后端访问密钥。'}}</view>
     <view wx:else class="notice warning">还没有保存后端访问密钥。先去设置页保存，再回来生成解读。</view>
 
@@ -250,6 +255,7 @@
       <view class="badge">{{matchedCount}} / 9</view>
     </view>
     <view class="privacy">{{usageText}}</view>
+    <view class="privacy">查询日期：{{queryDate}}</view>
     <view wx:if="{{cachedReportNotice}}" class="privacy">{{cachedReportNotice}}</view>
     <view class="report-actions">
       <button class="secondary compact-action" bindtap="copyReport">复制解读</button>

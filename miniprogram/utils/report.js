@@ -46,9 +46,12 @@ const reportSections = [
   },
 ];
 
-function buildPrompt(profile) {
+function buildPrompt(profile, context = {}) {
+  const queryDate = context.queryDate || "";
+
   return [
     "你是一名传统命理报告解释助手。请把原生小程序提供的出生信息、四柱摘要、紫微十二宫和星曜摘要翻译成普通人能听懂的话。",
+    queryDate ? `本次查询日期：${queryDate}。涉及“当前、近期、今天、本阶段”的判断时，只能围绕这个查询日期解释。` : "",
     "要求：",
     "1. 不要说绝对化预言，不要制造焦虑。",
     "2. 每个结论都要附上依据，依据只能来自输入数据。",
@@ -64,14 +67,19 @@ function buildPrompt(profile) {
     ),
     "",
     "结构化数据：",
-    JSON.stringify(compactProfileForPrompt(profile), null, 2),
-  ].join("\n");
+    JSON.stringify(compactProfileForPrompt(profile, context), null, 2),
+  ].filter(Boolean).join("\n");
 }
 
-function compactProfileForPrompt(profile) {
+function compactProfileForPrompt(profile, context = {}) {
   const ziwei = profile.ziwei || {};
 
   return {
+    query: {
+      date: context.queryDate,
+      generatedAt: context.generatedAt,
+      timezone: context.timezone || "Asia/Shanghai",
+    },
     birth: profile.birth,
     bazi: profile.bazi,
     ziwei: {

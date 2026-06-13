@@ -697,6 +697,31 @@
   margin-top: 16rpx;
 }
 
+.report-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+  margin-top: 16rpx;
+  border-radius: 12rpx;
+  padding: 14rpx 16rpx;
+  background: #f8faf7;
+  box-sizing: border-box;
+}
+
+.report-date-label {
+  color: #60736c;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.report-date-value {
+  color: #1f2a25;
+  font-size: 25rpx;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
 .consent-row {
   display: flex;
   align-items: flex-start;

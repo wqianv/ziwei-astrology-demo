@@ -82,9 +82,9 @@ without opening the H5 app:
    returning to the page.
 7. Progress and error states for slow, queued, or blocked LLM jobs.
 8. Sectioned LLM report display.
-9. Latest LLM report cached in local WeChat storage for the same birth profile,
-   with a clear action on the native page. The cache does not store the backend
-   access key.
+9. LLM report history cached in local WeChat storage by birth profile plus
+   query date, capped to the latest 8 reports, with a clear action on the native
+   page. The cache does not store the backend access key.
 10. Copy action for the latest native LLM report, including a usage-boundary
     note and no backend access key.
 

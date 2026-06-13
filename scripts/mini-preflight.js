@@ -163,17 +163,30 @@ function checkNativeFlow() {
     "warn",
   );
   passIf(
+    reportJs.includes("queryDate") &&
+      reportJs.includes("本次查询日期") &&
+      reportJs.includes("generatedAt") &&
+      nativeJs.includes("currentQueryDate") &&
+      nativeJs.includes("buildBirthCacheKey") &&
+      nativeJs.includes("|query:") &&
+      nativeWxml.includes("本次查询日期"),
+    "Native LLM prompt and cache are associated with a query date",
+    "Native LLM reports should be keyed by birth profile plus query date",
+  );
+  passIf(
     nativeJs.includes("LLM_REPORT_STORAGE") &&
       nativeJs.includes("LLM_JOB_STORAGE") &&
       nativeJs.includes("LLM_JOB_URL") &&
       nativeJs.includes("pollReportJob") &&
       nativeJs.includes("resumeActiveReportJob") &&
+      nativeJs.includes("readReportHistory") &&
+      nativeJs.includes("REPORT_HISTORY_LIMIT") &&
       nativeJs.includes("saveReportCache") &&
       nativeJs.includes("readReportCache") &&
       nativeJs.includes("clearCachedReport") &&
       nativeWxml.includes("清除本机解读"),
-    "Native LLM report uses background jobs, caches locally, and can be cleared",
-    "Native LLM report should use background jobs, save locally, and offer a clear action",
+    "Native LLM report uses background jobs, date-keyed history, and can be cleared",
+    "Native LLM report should use background jobs, date-keyed history, and offer a clear action",
   );
   passIf(
     nativeJs.includes("copyReport") &&
@@ -254,7 +267,11 @@ function checkNativeRuntimeSmoke() {
   const palaces = profile.ziwei && profile.ziwei.palaces
     ? profile.ziwei.palaces
     : [];
-  const prompt = buildPrompt(profile);
+  const prompt = buildPrompt(profile, {
+    queryDate: "2026-06-13",
+    generatedAt: "2026-06-13T00:00:00.000Z",
+    timezone: "Asia/Shanghai",
+  });
   const parsedReport = parseLLMReport(buildSampleMarkdownReport(reportSections));
 
   passIf(
@@ -303,6 +320,13 @@ function checkNativeRuntimeSmoke() {
       !prompt.includes("boardCells"),
     "Runtime smoke built compact LLM prompt without UI board cells",
     "Runtime smoke built an invalid or overly UI-heavy LLM prompt",
+  );
+  passIf(
+    prompt.includes("本次查询日期：2026-06-13") &&
+      prompt.includes('"date": "2026-06-13"') &&
+      prompt.includes('"timezone": "Asia/Shanghai"'),
+    "Runtime smoke included query date context in the LLM prompt",
+    "Runtime smoke prompt should include query date context",
   );
   passIf(
     prompt.length < 12000,
