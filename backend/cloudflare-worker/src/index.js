@@ -10,6 +10,7 @@ const PUBLIC_JOBS_PATH = "/api/llm/public/jobs";
 const ADMIN_LOGIN_PATH = "/api/admin/login";
 const ADMIN_LLM_TEST_PATH = "/api/admin/llm-test";
 const ADMIN_STATS_PATH = "/api/admin/stats";
+const ADMIN_TASKS_PATH = "/api/admin/tasks";
 const LEGACY_INTERPRET_PATHS = ["/api/llm/interpret", "/api/deepseek/interpret"];
 const DEFAULT_PUBLIC_HOURLY_LIMIT = 3;
 const DEFAULT_PUBLIC_DAILY_LIMIT = 8;
@@ -90,7 +91,15 @@ export default {
       return handleGetJob(route.jobId, request, env, route);
     }
 
-    return handleAdminStats(request, env, ctx);
+    if (route.type === "adminStats") {
+      return handleAdminStats(request, env, ctx);
+    }
+
+    if (route.type === "adminTasks") {
+      return handleAdminTasks(request, env, route);
+    }
+
+    return json({ error: "Not found" }, 404, request, env);
   },
 
   async queue(batch, env) {
@@ -512,6 +521,165 @@ async function handleAdminStats(request, env, ctx) {
   );
 }
 
+async function handleAdminTasks(request, env, route) {
+  if (!jobStore(env)) {
+    return json({ error: "Missing LLM_JOBS KV binding" }, 500, request, env);
+  }
+
+  const now = new Date().toISOString();
+  const tasks = await readAdminTasks(env);
+
+  if (request.method === "GET") {
+    return json(
+      {
+        generatedAt: now,
+        tasks,
+      },
+      200,
+      request,
+      env,
+    );
+  }
+
+  if (request.method === "POST") {
+    const bodyResult = await readJsonObject(request);
+
+    if (!bodyResult.ok) {
+      return json({ error: bodyResult.error }, bodyResult.status, request, env);
+    }
+
+    const input = parseTaskInput(bodyResult.body);
+
+    if (!input.title) {
+      return json({ error: "Missing task title" }, 400, request, env);
+    }
+
+    const task = {
+      id: crypto.randomUUID(),
+      title: input.title,
+      priority: input.priority,
+      status: input.status,
+      notes: input.notes,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: input.status === "done" ? now : "",
+    };
+    const nextTasks = [task, ...tasks].slice(0, 200);
+    await writeAdminTasks(env, nextTasks);
+
+    return json(
+      {
+        generatedAt: now,
+        task,
+        tasks: nextTasks,
+      },
+      201,
+      request,
+      env,
+    );
+  }
+
+  const taskId = route.taskId || "";
+  const taskIndex = tasks.findIndex((task) => task.id === taskId);
+
+  if (taskIndex < 0) {
+    return json({ error: "Task not found" }, 404, request, env);
+  }
+
+  if (request.method === "DELETE") {
+    const nextTasks = tasks.filter((task) => task.id !== taskId);
+    await writeAdminTasks(env, nextTasks);
+
+    return json(
+      {
+        generatedAt: now,
+        tasks: nextTasks,
+      },
+      200,
+      request,
+      env,
+    );
+  }
+
+  const bodyResult = await readJsonObject(request);
+
+  if (!bodyResult.ok) {
+    return json({ error: bodyResult.error }, bodyResult.status, request, env);
+  }
+
+  const input = parseTaskInput(bodyResult.body, tasks[taskIndex]);
+  const previousTask = tasks[taskIndex];
+  const nextTask = {
+    ...previousTask,
+    title: input.title || previousTask.title,
+    priority: input.priority,
+    status: input.status,
+    notes: input.notes,
+    updatedAt: now,
+    completedAt:
+      input.status === "done"
+        ? previousTask.completedAt || now
+        : "",
+  };
+  const nextTasks = tasks.map((task, index) =>
+    index === taskIndex ? nextTask : task,
+  );
+  await writeAdminTasks(env, nextTasks);
+
+  return json(
+    {
+      generatedAt: now,
+      task: nextTask,
+      tasks: nextTasks,
+    },
+    200,
+    request,
+    env,
+  );
+}
+
+async function readAdminTasks(env) {
+  const raw = await jobStore(env).get("admin:tasks:v1");
+  const parsed = parseJson(raw);
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed
+    .filter((task) => task && typeof task === "object" && task.id && task.title)
+    .slice(0, 200);
+}
+
+async function writeAdminTasks(env, tasks) {
+  await jobStore(env).put("admin:tasks:v1", JSON.stringify(tasks.slice(0, 200)));
+}
+
+function parseTaskInput(body, fallback = {}) {
+  return {
+    title: truncateText(body.title, 120),
+    priority: normalizeTaskPriority(body.priority, fallback.priority),
+    status: normalizeTaskStatus(body.status, fallback.status),
+    notes: truncateText(body.notes, 2000, fallback.notes || ""),
+  };
+}
+
+function normalizeTaskPriority(value, fallback = "medium") {
+  return ["high", "medium", "low"].includes(value) ? value : fallback || "medium";
+}
+
+function normalizeTaskStatus(value, fallback = "todo") {
+  return ["todo", "doing", "done"].includes(value) ? value : fallback || "todo";
+}
+
+function truncateText(value, maxLength, fallback = "") {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  return value.trim().slice(0, maxLength);
+}
+
 async function requestLLM(env, prompt) {
   const apiKey = providerApiKey(env);
 
@@ -656,6 +824,31 @@ function resolveRoute(pathname) {
     };
   }
 
+  if (pathname === ADMIN_TASKS_PATH) {
+    return {
+      type: "adminTasks",
+      methods: ["GET", "POST"],
+      auth: "adminSession",
+      public: false,
+    };
+  }
+
+  const adminTaskPrefix = `${ADMIN_TASKS_PATH}/`;
+
+  if (pathname.startsWith(adminTaskPrefix)) {
+    const taskId = decodeURIComponent(pathname.slice(adminTaskPrefix.length));
+
+    if (/^[a-z0-9-]{8,80}$/i.test(taskId)) {
+      return {
+        type: "adminTasks",
+        methods: ["PATCH", "DELETE"],
+        taskId,
+        auth: "adminSession",
+        public: false,
+      };
+    }
+  }
+
   if (LEGACY_INTERPRET_PATHS.includes(pathname)) {
     return {
       type: "interpret",
@@ -747,7 +940,7 @@ function corsHeaders(request, env) {
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Ziwei-Client-Id, X-Ziwei-Proxy-Key",
     Vary: "Origin",
   };

@@ -90,12 +90,24 @@ function llmInterpretationPlugin(env: Record<string, string>) {
               }),
             },
           );
-          const data = await response.json();
+          const responseText = await response.text();
+          const data = parseJson(responseText);
 
           if (!response.ok) {
             sendJson(res, response.status, {
-              error: data?.error?.message || "LLM API request failed",
-              details: data,
+              error:
+                data?.error?.message ||
+                responseText ||
+                "LLM API request failed",
+              details: data || responseText.slice(0, 500),
+            });
+            return;
+          }
+
+          if (!data) {
+            sendJson(res, 502, {
+              error: "LLM API returned empty or invalid JSON",
+              details: responseText.slice(0, 500),
             });
             return;
           }
@@ -136,6 +148,14 @@ function readJsonBody<T>(
     });
     req.on("error", reject);
   });
+}
+
+function parseJson(value: string) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 function sendJson(

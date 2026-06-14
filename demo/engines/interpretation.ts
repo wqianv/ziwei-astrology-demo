@@ -296,14 +296,17 @@ export function createLocalInterpretation(
 
 export function buildLLMPrompt(payload: InterpretationPayload): string {
   return [
-    "你是一名传统命理报告解释助手。请把紫微斗数和四柱八字的结构化排盘结果翻译成普通人能听懂的话。",
+    "你是一名传统文化命盘解释助手。请把紫微斗数和四柱八字资料翻译成普通人能听懂的话。",
     "要求：",
     "1. 不要说绝对化预言，不要制造焦虑。",
-    "2. 每个结论都要附上依据，依据只能来自输入数据。",
+    "2. 每个结论都要附上中文盘面依据，依据只能来自输入资料。",
     "3. 严格按下方报告结构输出，不要新增、删除或改名一级章节。",
     "4. 每个章节必须包含：人话解释、盘面依据、建议。",
     "5. 每个一级章节必须使用 Markdown 二级标题，格式为 `## 章节名`，章节名必须和下方报告结构完全一致。",
     "6. 语言要像咨询师一样清楚、温和、具体，不要堆术语。",
+    "7. 不要提技术实现、内部数据结构、产品端形态、接口、字段来源或任何英文路径。",
+    "8. 盘面依据只能写成人能读懂的中文表达，例如“四柱显示……”“命宫显示……”“财帛宫显示……”。",
+    "9. 不要在括号里补充字段来源；不要写类似“依据：某字段”的说明。",
     "",
     "报告结构：",
     ...reportSectionSchema.map(
@@ -311,9 +314,105 @@ export function buildLLMPrompt(payload: InterpretationPayload): string {
         `${index + 1}. ${section.title}：${section.purpose}`,
     ),
     "",
-    "结构化数据：",
-    JSON.stringify(payload, null, 2),
+    "盘面资料：",
+    formatPayloadForPrompt(payload),
   ].join("\n");
+}
+
+function formatPayloadForPrompt(payload: InterpretationPayload): string {
+  const lines: string[] = [];
+  const { birth, bazi, ziwei } = payload;
+
+  lines.push("【出生信息】");
+  appendPromptLine(lines, "出生日期", birth.source);
+  appendPromptLine(lines, "阳历", birth.solar);
+  appendPromptLine(lines, "农历", birth.lunar);
+  appendPromptLine(lines, "性别", birth.gender);
+  appendPromptLine(lines, "出生时辰", birth.birthTime);
+
+  lines.push("");
+  lines.push("【四柱八字】");
+  appendPromptLine(
+    lines,
+    "日主",
+    `${bazi.dayMaster.yinYang}${bazi.dayMaster.element}${bazi.dayMaster.stem}`,
+  );
+  appendPromptLine(
+    lines,
+    "四柱",
+    bazi.pillars
+      .map((pillar) => {
+        const details = [
+          pillar.ganzhi,
+          `天干${pillar.stem}${pillar.stemTenGod ? `/${pillar.stemTenGod}` : ""}`,
+          `地支${pillar.branch}`,
+          `五行${pillar.wuXing}`,
+        ];
+        return `${pillar.name}：${details.join("，")}`;
+      })
+      .join("；"),
+  );
+  appendPromptLine(
+    lines,
+    "五行可见分布",
+    bazi.elementCounts.map((item) => `${item.name}${item.count}`).join("、"),
+  );
+  appendPromptLine(lines, "纳音", bazi.naYin.join("、"));
+  appendPromptLine(lines, "十神", bazi.tenGods.join("、") || "不明显");
+  appendPromptLine(
+    lines,
+    "大运",
+    `${bazi.daYun.forward ? "顺行" : "逆行"}，起运 ${bazi.daYun.startsAfter}`,
+  );
+  if (bazi.daYun.items.length) {
+    lines.push("大运列表：");
+    bazi.daYun.items.forEach((item) => {
+      lines.push(
+        `- ${item.ganzhi}：${item.startAge}-${item.endAge}岁，${item.startYear}-${item.endYear}年`,
+      );
+    });
+  }
+
+  lines.push("");
+  lines.push("【紫微斗数】");
+  appendPromptLine(lines, "阳历", ziwei.solarDate);
+  appendPromptLine(lines, "农历", ziwei.lunarDate);
+  appendPromptLine(lines, "干支日期", ziwei.chineseDate);
+  appendPromptLine(lines, "出生时辰", ziwei.time);
+  appendPromptLine(lines, "生肖星座", [ziwei.zodiac, ziwei.sign].filter(Boolean).join("、"));
+  appendPromptLine(lines, "五行局", ziwei.fiveElementsClass);
+  appendPromptLine(
+    lines,
+    "命主身主",
+    [ziwei.soul ? `命主${ziwei.soul}` : "", ziwei.body ? `身主${ziwei.body}` : ""]
+      .filter(Boolean)
+      .join("、"),
+  );
+  if (ziwei.keyPalaces.length) {
+    lines.push("重点宫位：");
+    ziwei.keyPalaces.forEach((palace) => lines.push(`- ${formatZiweiPalace(palace)}`));
+  }
+
+  return lines.join("\n");
+}
+
+function appendPromptLine(lines: string[], label: string, value: string) {
+  const text = value.trim();
+
+  if (text) {
+    lines.push(`${label}：${text}`);
+  }
+}
+
+function formatZiweiPalace(palace: ZiweiPalaceSummary): string {
+  const major = palace.majorStars.map(formatStar).join("、") || "无主星";
+  const minor = palace.minorStars.map(formatStar).join("、") || "辅星少";
+  const adjective = palace.adjectiveStars.join("、") || "杂曜少";
+  const decadal = palace.decadalRange.length === 2
+    ? `${palace.decadalRange[0]}-${palace.decadalRange[1]}岁`
+    : "大限待校验";
+
+  return `${palace.name}（${palace.heavenlyStem}${palace.earthlyBranch}）：主星${major}；辅星${minor}；杂曜${adjective}；大限${decadal}${palace.isEmpty ? "；主星空宫" : ""}`;
 }
 
 function getSectionTitle(id: ReportSectionId): string {

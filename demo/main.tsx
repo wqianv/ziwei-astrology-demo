@@ -54,6 +54,9 @@ const ADMIN_LOGIN_ENDPOINT =
 const ADMIN_STATS_ENDPOINT =
   import.meta.env.VITE_ADMIN_STATS_URL ||
   `${workerBaseUrl()}/api/admin/stats`;
+const ADMIN_TASKS_ENDPOINT =
+  import.meta.env.VITE_ADMIN_TASKS_URL ||
+  `${workerBaseUrl()}/api/admin/tasks`;
 
 type AdminSession = {
   token: string;
@@ -71,6 +74,26 @@ type AdminStats = {
   jobTtlSeconds?: number;
 };
 
+type AdminTaskPriority = "high" | "medium" | "low";
+type AdminTaskStatus = "todo" | "doing" | "done";
+
+type AdminTask = {
+  id: string;
+  title: string;
+  priority: AdminTaskPriority;
+  status: AdminTaskStatus;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string;
+};
+
+type AdminTaskDraft = {
+  title: string;
+  priority: AdminTaskPriority;
+  notes: string;
+};
+
 function Dashboard() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -78,8 +101,16 @@ function Dashboard() {
     readDashboardSession(),
   );
   const [stats, setStats] = useState<AdminStats>();
+  const [tasks, setTasks] = useState<AdminTask[]>([]);
+  const [taskDraft, setTaskDraft] = useState<AdminTaskDraft>({
+    title: "",
+    priority: "medium",
+    notes: "",
+  });
   const [loggingIn, setLoggingIn] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [savingTask, setSavingTask] = useState("");
   const [notice, setNotice] = useState("");
   const [noticeType, setNoticeType] = useState<"success" | "warning" | "error">(
     "success",
@@ -116,7 +147,7 @@ function Dashboard() {
           platform: "web",
         }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse<Record<string, unknown>>(response);
 
       if (!response.ok) {
         throw new Error(adminLoginErrorMessage(response.status, data));
@@ -139,7 +170,7 @@ function Dashboard() {
       setPassword("");
       setSession(nextSession);
       showNotice("管理后台登录成功。");
-      await loadStats(nextSession);
+      await Promise.all([loadStats(nextSession), loadTasks(nextSession)]);
     } catch (error) {
       showNotice(
         error instanceof Error ? error.message : "管理后台登录失败。",
@@ -154,6 +185,7 @@ function Dashboard() {
     window.localStorage.removeItem(DASHBOARD_SESSION_STORAGE_KEY);
     setSession(null);
     setStats(undefined);
+    setTasks([]);
     showNotice("已退出管理后台。");
   };
 
@@ -173,7 +205,7 @@ function Dashboard() {
           Authorization: `Bearer ${targetSession.token}`,
         },
       });
-      const data = await response.json();
+      const data = await readJsonResponse<AdminStats>(response);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -181,7 +213,9 @@ function Dashboard() {
           setSession(null);
         }
 
-        throw new Error(adminStatsErrorMessage(response.status, data));
+        throw new Error(
+          adminStatsErrorMessage(response.status, data as Record<string, unknown>),
+        );
       }
 
       setStats(data);
@@ -196,9 +230,135 @@ function Dashboard() {
     }
   };
 
+  const loadTasks = async (targetSession = session) => {
+    if (!targetSession?.token) {
+      showNotice("请先登录管理后台。", "warning");
+      return;
+    }
+
+    setLoadingTasks(true);
+
+    try {
+      const response = await fetch(ADMIN_TASKS_ENDPOINT, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${targetSession.token}`,
+        },
+      });
+      const data = await readJsonResponse<{ tasks?: unknown }>(response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          window.localStorage.removeItem(DASHBOARD_SESSION_STORAGE_KEY);
+          setSession(null);
+        }
+
+        throw new Error(adminTasksErrorMessage(response.status, data));
+      }
+
+      setTasks(normalizeAdminTasks(data.tasks));
+    } catch (error) {
+      showNotice(
+        error instanceof Error ? error.message : "任务清单读取失败。",
+        "error",
+      );
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const createTask = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!session?.token) {
+      showNotice("请先登录管理后台。", "warning");
+      return;
+    }
+
+    if (!taskDraft.title.trim()) {
+      showNotice("先写一个问题标题。", "warning");
+      return;
+    }
+
+    setSavingTask("new");
+
+    try {
+      const response = await fetch(ADMIN_TASKS_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(taskDraft),
+      });
+      const data = await readJsonResponse<{ tasks?: unknown }>(response);
+
+      if (!response.ok) {
+        throw new Error(adminTasksErrorMessage(response.status, data));
+      }
+
+      setTasks(normalizeAdminTasks(data.tasks));
+      setTaskDraft({
+        title: "",
+        priority: "medium",
+        notes: "",
+      });
+      showNotice("问题已加入任务清单。");
+    } catch (error) {
+      showNotice(
+        error instanceof Error ? error.message : "任务创建失败。",
+        "error",
+      );
+    } finally {
+      setSavingTask("");
+    }
+  };
+
+  const updateTask = async (
+    taskId: string,
+    patch: Partial<Pick<AdminTask, "title" | "priority" | "status" | "notes">>,
+  ) => {
+    if (!session?.token) {
+      showNotice("请先登录管理后台。", "warning");
+      return;
+    }
+
+    setSavingTask(taskId);
+
+    try {
+      const response = await fetch(
+        `${ADMIN_TASKS_ENDPOINT}/${encodeURIComponent(taskId)}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(patch),
+        },
+      );
+      const data = await readJsonResponse<{ tasks?: unknown }>(response);
+
+      if (!response.ok) {
+        throw new Error(adminTasksErrorMessage(response.status, data));
+      }
+
+      setTasks(normalizeAdminTasks(data.tasks));
+      showNotice("任务已更新。");
+    } catch (error) {
+      showNotice(
+        error instanceof Error ? error.message : "任务更新失败。",
+        "error",
+      );
+    } finally {
+      setSavingTask("");
+    }
+  };
+
   useEffect(() => {
     if (session?.token) {
       void loadStats(session);
+      void loadTasks(session);
     }
   }, []);
 
@@ -289,6 +449,172 @@ function Dashboard() {
                 <strong>{row.value}</strong>
               </div>
             ))}
+          </div>
+
+          <div className="dashboard-card dashboard-tasks">
+            <div className="dashboard-tasks-header">
+              <div>
+                <h2>问题任务板</h2>
+                <p>记录要改的问题、优先级、讨论记录和完成时间。</p>
+              </div>
+              <button
+                className="secondary-dashboard-button"
+                type="button"
+                disabled={loadingTasks}
+                onClick={() => void loadTasks()}
+              >
+                {loadingTasks ? "读取中" : "刷新任务"}
+              </button>
+            </div>
+
+            <form className="task-form" onSubmit={createTask}>
+              <label>
+                <span>问题标题</span>
+                <input
+                  value={taskDraft.title}
+                  onChange={(event) =>
+                    setTaskDraft((draft) => ({
+                      ...draft,
+                      title: event.target.value,
+                    }))
+                  }
+                  placeholder="例如：LLM 解读里还会出现字段名"
+                />
+              </label>
+              <label>
+                <span>优先级</span>
+                <select
+                  value={taskDraft.priority}
+                  onChange={(event) =>
+                    setTaskDraft((draft) => ({
+                      ...draft,
+                      priority: event.target.value as AdminTaskPriority,
+                    }))
+                  }
+                >
+                  <option value="high">高</option>
+                  <option value="medium">中</option>
+                  <option value="low">低</option>
+                </select>
+              </label>
+              <label className="task-form-notes">
+                <span>讨论记录 / 处理想法</span>
+                <textarea
+                  value={taskDraft.notes}
+                  onChange={(event) =>
+                    setTaskDraft((draft) => ({
+                      ...draft,
+                      notes: event.target.value,
+                    }))
+                  }
+                  placeholder="把现象、截图说明、我们讨论出的方案写这里。"
+                />
+              </label>
+              <button type="submit" disabled={savingTask === "new"}>
+                {savingTask === "new" ? "添加中" : "添加问题"}
+              </button>
+            </form>
+
+            {tasks.length === 0 ? (
+              <p className="task-empty">
+                暂无问题。后面发现样式、功能、审核或模型输出问题，都可以先记在这里。
+              </p>
+            ) : (
+              <div className="task-groups">
+                {dashboardTaskGroups(tasks).map((group) => (
+                  <section className="task-group" key={group.status}>
+                    <h3>
+                      {group.title}
+                      <span>{group.tasks.length}</span>
+                    </h3>
+                    <div className="task-list">
+                      {group.tasks.map((task) => (
+                        <article className="task-card" key={task.id}>
+                          <header>
+                            <span className={`task-priority ${task.priority}`}>
+                              {dashboardPriorityLabel(task.priority)}
+                            </span>
+                            <small>{dashboardStatusLabel(task.status)}</small>
+                          </header>
+                          <h4>{task.title}</h4>
+                          <textarea
+                            key={`${task.id}-${task.updatedAt || ""}`}
+                            defaultValue={task.notes || ""}
+                            onBlur={(event) => {
+                              const notes = event.currentTarget.value;
+
+                              if (notes !== (task.notes || "")) {
+                                void updateTask(task.id, { notes });
+                              }
+                            }}
+                            placeholder="讨论记录、复现步骤、处理方案"
+                          />
+                          <footer>
+                            <div>
+                              <span>创建 {dashboardDate(task.createdAt)}</span>
+                              <span>更新 {dashboardDate(task.updatedAt)}</span>
+                              {task.completedAt && (
+                                <span>完成 {dashboardDate(task.completedAt)}</span>
+                              )}
+                            </div>
+                            <div>
+                              <select
+                                value={task.priority}
+                                disabled={savingTask === task.id}
+                                onChange={(event) =>
+                                  void updateTask(task.id, {
+                                    priority: event.target.value as AdminTaskPriority,
+                                  })
+                                }
+                              >
+                                <option value="high">高</option>
+                                <option value="medium">中</option>
+                                <option value="low">低</option>
+                              </select>
+                              {task.status !== "doing" && task.status !== "done" && (
+                                <button
+                                  className="secondary-dashboard-button"
+                                  type="button"
+                                  disabled={savingTask === task.id}
+                                  onClick={() =>
+                                    void updateTask(task.id, { status: "doing" })
+                                  }
+                                >
+                                  进行中
+                                </button>
+                              )}
+                              {task.status !== "done" ? (
+                                <button
+                                  className="secondary-dashboard-button"
+                                  type="button"
+                                  disabled={savingTask === task.id}
+                                  onClick={() =>
+                                    void updateTask(task.id, { status: "done" })
+                                  }
+                                >
+                                  完成
+                                </button>
+                              ) : (
+                                <button
+                                  className="secondary-dashboard-button"
+                                  type="button"
+                                  disabled={savingTask === task.id}
+                                  onClick={() =>
+                                    void updateTask(task.id, { status: "todo" })
+                                  }
+                                >
+                                  重开
+                                </button>
+                              )}
+                            </div>
+                          </footer>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -1353,6 +1679,24 @@ function readDashboardSession(): AdminSession | null {
   }
 }
 
+async function readJsonResponse<T = Record<string, unknown>>(
+  response: Response,
+): Promise<T> {
+  const text = await response.text();
+
+  if (!text.trim()) {
+    return {} as T;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(
+      `接口返回不是 JSON（${response.status}）：${text.slice(0, 160)}`,
+    );
+  }
+}
+
 function dashboardStatCards(stats?: AdminStats) {
   const today = stats?.today || {};
   const hour = stats?.currentHour || {};
@@ -1414,6 +1758,10 @@ function dashboardMetaRows(stats?: AdminStats) {
       value: ADMIN_STATS_ENDPOINT,
     },
     {
+      label: "任务板接口",
+      value: ADMIN_TASKS_ENDPOINT,
+    },
+    {
       label: "最近完成",
       value: dashboardLastEvent(last.completedJob),
     },
@@ -1458,6 +1806,81 @@ function dashboardNumber(value: unknown): string {
   return Number.isFinite(number) ? String(Math.floor(number)) : "0";
 }
 
+function dashboardTaskGroups(tasks: AdminTask[]) {
+  const priorityWeight: Record<AdminTaskPriority, number> = {
+    high: 0,
+    medium: 1,
+    low: 2,
+  };
+  const groups: Array<{ status: AdminTaskStatus; title: string; tasks: AdminTask[] }> = [
+    { status: "todo", title: "待处理", tasks: [] },
+    { status: "doing", title: "进行中", tasks: [] },
+    { status: "done", title: "已完成", tasks: [] },
+  ];
+
+  tasks.forEach((task) => {
+    const group = groups.find((item) => item.status === task.status) || groups[0];
+    group.tasks.push(task);
+  });
+  groups.forEach((group) => {
+    group.tasks.sort((left, right) => {
+      const priorityDelta =
+        priorityWeight[left.priority] - priorityWeight[right.priority];
+
+      if (priorityDelta !== 0) {
+        return priorityDelta;
+      }
+
+      return String(right.updatedAt || right.createdAt || "").localeCompare(
+        String(left.updatedAt || left.createdAt || ""),
+      );
+    });
+  });
+
+  return groups.filter((group) => group.tasks.length > 0);
+}
+
+function normalizeAdminTasks(value: unknown): AdminTask[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isAdminTask).map((task) => ({
+    ...task,
+    priority: ["high", "medium", "low"].includes(task.priority)
+      ? task.priority
+      : "medium",
+    status: ["todo", "doing", "done"].includes(task.status)
+      ? task.status
+      : "todo",
+  }));
+}
+
+function isAdminTask(value: unknown): value is AdminTask {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const task = value as Record<string, unknown>;
+  return typeof task.id === "string" && typeof task.title === "string";
+}
+
+function dashboardPriorityLabel(priority: AdminTaskPriority): string {
+  return {
+    high: "高优先级",
+    medium: "中优先级",
+    low: "低优先级",
+  }[priority];
+}
+
+function dashboardStatusLabel(status: AdminTaskStatus): string {
+  return {
+    todo: "待处理",
+    doing: "进行中",
+    done: "已完成",
+  }[status];
+}
+
 function adminLoginErrorMessage(status: number, data: Record<string, unknown>) {
   if (status === 401) {
     return "管理员用户名或密码不正确。";
@@ -1480,6 +1903,18 @@ function adminStatsErrorMessage(status: number, data: Record<string, unknown>) {
   }
 
   return `管理统计读取失败（${status}）：${String(data.error || "未知错误")}`;
+}
+
+function adminTasksErrorMessage(status: number, data: Record<string, unknown>) {
+  if (status === 401) {
+    return "管理登录已过期，请重新登录。";
+  }
+
+  if (status >= 500) {
+    return `任务板暂时异常（${status}）：${String(data.error || "未知错误")}`;
+  }
+
+  return `任务板请求失败（${status}）：${String(data.error || "未知错误")}`;
 }
 
 function trimTrailingSlash(value: string): string {

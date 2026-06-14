@@ -57,13 +57,13 @@ export async function requestDeepSeekInterpretation(
     },
     body: JSON.stringify({ prompt: request.prompt }),
   });
-  const data = await response.json();
+  const data = await readJsonResponse(response);
 
   if (!response.ok) {
-    throw new Error(data.error || "LLM request failed");
+    throw new Error(String(data.error || "LLM request failed"));
   }
 
-  return { ...data, source: "proxy" };
+  return { ...(data as DeepSeekInterpretationResponse), source: "proxy" };
 }
 
 async function requestDeepSeekFromBrowser({
@@ -112,18 +112,48 @@ async function requestDeepSeekFromBrowser({
     );
   }
 
-  const data = await response.json();
+  const data = await readJsonResponse(response);
 
   if (!response.ok) {
-    throw new Error(data?.error?.message || "LLM request failed");
+    const error = data.error as { message?: string } | undefined;
+    throw new Error(error?.message || String(data.error || "LLM request failed"));
   }
 
   return {
-    model: data.model,
-    content: data.choices?.[0]?.message?.content ?? "",
-    usage: data.usage,
+    model: String(data.model || ""),
+    content: readChoiceContent(data),
+    usage: data.usage as DeepSeekInterpretationResponse["usage"],
     source: "browser" as const,
   };
+}
+
+async function readJsonResponse(
+  response: Response,
+): Promise<Record<string, unknown>> {
+  const text = await response.text();
+
+  if (!text.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    throw new Error(
+      `接口返回不是 JSON（${response.status}）：${text.slice(0, 160)}`,
+    );
+  }
+}
+
+function readChoiceContent(data: Record<string, unknown>): string {
+  const choices = Array.isArray(data.choices) ? data.choices : [];
+  const first = choices[0] as
+    | { message?: { content?: unknown } }
+    | undefined;
+
+  return typeof first?.message?.content === "string"
+    ? first.message.content
+    : "";
 }
 
 function trimTrailingSlash(value: string) {

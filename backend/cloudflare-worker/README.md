@@ -101,6 +101,9 @@ GET  /api/llm/jobs/{jobId}
 POST /api/admin/login
 POST /api/admin/llm-test
 GET  /api/admin/stats
+GET  /api/admin/tasks
+POST /api/admin/tasks
+PATCH /api/admin/tasks/{taskId}
 ```
 
 The public Mini Program endpoints are:

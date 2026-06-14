@@ -7,7 +7,8 @@ export type ParsedLLMReport = {
 };
 
 export function parseLLMMarkdown(markdown: string): ParsedLLMReport {
-  const lines = markdown.split(/\r?\n/);
+  const sanitizedMarkdown = stripInternalReferences(markdown);
+  const lines = sanitizedMarkdown.split(/\r?\n/);
   const sections: Partial<Record<ReportSectionId, string>> = {};
   const intro: string[] = [];
   let currentSection: ReportSectionId | undefined;
@@ -37,7 +38,7 @@ export function parseLLMMarkdown(markdown: string): ParsedLLMReport {
   return {
     intro: intro.join("\n").trim(),
     sections,
-    unmatched: matchedAnySection ? "" : markdown.trim(),
+    unmatched: matchedAnySection ? "" : sanitizedMarkdown.trim(),
   };
 }
 
@@ -75,4 +76,19 @@ function normalizeHeading(value: string): string {
     .replace(/[\s/／｜|·・\-—–]+/g, "")
     .replace(/[，,。.;；]/g, "")
     .toLowerCase();
+}
+
+function stripInternalReferences(value: string): string {
+  return value
+    .replace(/（依据[:：][^）]*(?:[A-Za-z_]+\.[A-Za-z0-9_.]+|JSON|字段|变量|key)[^）]*）/gi, "")
+    .replace(/\(依据[:：][^)]*(?:[A-Za-z_]+\.[A-Za-z0-9_.]+|JSON|字段|变量|key)[^)]*\)/gi, "")
+    .split(/\r?\n/)
+    .filter(
+      (line) =>
+        !/(参照说明|原生版|网页版完整盘|iztro|JSON|字段名|变量名|接口名|bazi\.|ziwei\.|elementCounts|mingPalace|bodyPalace)/i.test(
+          line,
+        ),
+    )
+    .join("\n")
+    .trim();
 }

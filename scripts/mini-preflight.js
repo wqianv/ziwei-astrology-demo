@@ -372,6 +372,15 @@ function checkWorkerFlow() {
     "Worker should expose protected admin stats with failures and rate-limit counters",
   );
   passIf(
+    worker.includes("ADMIN_TASKS_PATH") &&
+      worker.includes("/api/admin/tasks") &&
+      worker.includes("handleAdminTasks") &&
+      worker.includes("admin:tasks:v1") &&
+      worker.includes("completedAt"),
+    "Worker exposes protected admin tasklist endpoints backed by KV",
+    "Worker should expose protected admin tasklist endpoints with dated completion state",
+  );
+  passIf(
     worker.includes("ADMIN_LOGIN_PATH") &&
       worker.includes("/api/admin/login") &&
       worker.includes("handleAdminLogin") &&
@@ -470,15 +479,18 @@ function checkNativeRuntimeSmoke() {
   );
   passIf(
     prompt.includes("基础命盘摘要") &&
-      prompt.includes("结构化数据") &&
-      !prompt.includes("boardCells"),
-    "Runtime smoke built compact LLM prompt without UI board cells",
-    "Runtime smoke built an invalid or overly UI-heavy LLM prompt",
+      prompt.includes("盘面资料") &&
+      !prompt.includes("boardCells") &&
+      !prompt.includes("bazi.") &&
+      !prompt.includes("ziwei.") &&
+      !prompt.includes("iztro"),
+    "Runtime smoke built compact user-facing LLM prompt without UI or internal keys",
+    "Runtime smoke built an invalid or implementation-leaking LLM prompt",
   );
   passIf(
     prompt.includes("本次查询日期：2026-06-13") &&
-      prompt.includes('"date": "2026-06-13"') &&
-      prompt.includes('"timezone": "Asia/Shanghai"'),
+      prompt.includes("查询日期：2026-06-13") &&
+      prompt.includes("时区：Asia/Shanghai"),
     "Runtime smoke included query date context in the LLM prompt",
     "Runtime smoke prompt should include query date context",
   );
@@ -517,10 +529,11 @@ function checkWebviewFlow(config) {
       demoMain.includes("DASHBOARD_SESSION_STORAGE_KEY") &&
       demoMain.includes("ADMIN_LOGIN_ENDPOINT") &&
       demoMain.includes("ADMIN_STATS_ENDPOINT") &&
+      demoMain.includes("ADMIN_TASKS_ENDPOINT") &&
       demoMain.includes('"/dashboard"') &&
       redirects.includes("/* /index.html 200"),
-    "H5 site includes a protected /dashboard admin route",
-    "H5 site should render a login-gated dashboard at /dashboard with static route fallback",
+    "H5 site includes a protected /dashboard admin route with tasklist",
+    "H5 site should render a login-gated dashboard with stats, tasklist, and static route fallback",
   );
 }
 
